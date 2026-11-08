@@ -1,9 +1,7 @@
+import 'login_page.dart';
+import 'app_theme.dart';
 import 'package:flutter/material.dart';
 
-enum AppLanguage {
-  english,
-  korean,
-}
 
 class SouthKoreaApp extends StatelessWidget {
   const SouthKoreaApp({super.key});
@@ -622,12 +620,12 @@ class _OnboardingPageState
   // ==============================================================
   // START MY JOURNEY
   // ==============================================================
-
   void _startMyJourney() {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) {
-          return JourneyPage(
+          // Navigate to LoginPage instead of the placeholder
+          return LoginPage(
             language: selectedLanguage,
           );
         },
