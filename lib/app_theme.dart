@@ -14,6 +14,11 @@ const Color lightText = Color(0xFF777777);
 const Color borderGray = Color(0xFFE2E2E2);
 const Color bgColor = Color(0xFFF8F9FA);
 
+// --- WORD QUIZ TILE COLORS (Figma: Right spot / Wrong spot / Not in word) ---
+const Color tileOrange = Color(0xFFF5A623);
+const Color tileGray = Color(0xFFA5A9A8);
+const Color softBlue = Color(0xFFEAF3FC);
+
 // --- RESPONSIVE LAYOUT WRAPPER ---
 // This centers the content and keeps it at a max width of 600 on Tablets.
 class ResponsiveLayout extends StatelessWidget {
