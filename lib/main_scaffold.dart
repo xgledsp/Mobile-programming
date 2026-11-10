@@ -4,7 +4,7 @@ import 'home_page.dart';
 import 'quests_page.dart';
 import 'notice_page.dart';
 import 'culture_page.dart';
-import 'profile_page.dart';
+import 'me_page.dart';
 
 class _NavItem {
   final IconData icon;
@@ -43,8 +43,14 @@ class _MainScaffoldState extends State<MainScaffold> {
     const QuestsPage(),
     const NoticePage(), // Campus tab: left as it was (used for Notice Explained)
     const CulturePage(),
-    const ProfilePage(),
+    MePage(language: widget.language),
   ];
+
+  // English mode: "Home 홈", Korean mode: "홈" only.
+  String _navLabel(_NavItem item, String separator) =>
+      widget.language == AppLanguage.korean
+          ? item.labelKo
+          : '${item.label}$separator${item.labelKo}';
 
   void _onTabSelected(int index) {
     setState(() {
@@ -135,7 +141,7 @@ class _MainScaffoldState extends State<MainScaffold> {
           return BottomNavigationBarItem(
             icon: Icon(item.icon),
             activeIcon: Icon(item.activeIcon),
-            label: '${item.label} ${item.labelKo}',
+            label: _navLabel(item, ' '),
           );
         }).toList(),
       ),
