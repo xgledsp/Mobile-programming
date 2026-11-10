@@ -1,10 +1,56 @@
 import 'package:flutter/material.dart';
 import 'app_theme.dart';
 import 'character_chat_page.dart';
+import 'quiz_session.dart';
+import 'review_page.dart';
+import 'word_data.dart';
+import 'word_quiz_page.dart';
 
 class HomePage extends StatelessWidget {
   final AppLanguage language;
   const HomePage({super.key, required this.language});
+
+  void _openQuiz(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => const WordQuizPage(),
+      ),
+    );
+  }
+
+  // Goes straight to the review page. From there "Next word" starts the quiz.
+  void _openReview(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext reviewContext) => ReviewPage(
+          history: List<ReviewEntry>.of(QuizSession.instance.history),
+          onNextWord: () => _openQuiz(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _quizButton(String label, VoidCallback onPressed) {
+    return SizedBox(
+      width: double.infinity,
+      height: 46,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryBlue,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          shape: const StadiumBorder(),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -187,21 +233,9 @@ class HomePage extends StatelessWidget {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: darkText),
                 ),
                 const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: borderGray),
-                  ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Start Quiz', style: TextStyle(color: primaryBlue, fontWeight: FontWeight.bold, fontSize: 16)),
-                    ],
-                  ),
-                )
+                _quizButton('Start Quiz', () => _openQuiz(context)),
+                const SizedBox(height: 10),
+                _quizButton('Review Quiz', () => _openReview(context)),
               ],
             ),
           ),
