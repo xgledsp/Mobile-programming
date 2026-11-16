@@ -94,7 +94,7 @@ class HomePage extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const CharacterChatPage()),
+                      MaterialPageRoute(builder: (context) => CharacterChatPage(language: language)),
                     );
                   },
                   child: Container(
