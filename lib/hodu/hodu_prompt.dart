@@ -1,4 +1,5 @@
 import '../app_theme.dart';
+import 'knowledge/kb_entry.dart';
 
 // ================================================================
 // HODU SYSTEM PROMPT - the AI's instructions
@@ -16,10 +17,27 @@ class HoduPrompt {
   final AppLanguage language;
   final DateTime today;
 
-  HoduPrompt({required this.language, DateTime? today})
+  /// Verified knowledge-base entries matching the question ("grounding").
+  final List<KbEntry> facts;
+
+  HoduPrompt({required this.language, DateTime? today, this.facts = const []})
       : today = today ?? DateTime.now();
 
-  String build() {
+  String build() => facts.isEmpty ? _base() : '${_base()}\n\n${_factsSection()}';
+
+  /// The facts are wrapped in <facts> tags so the model can clearly see
+  /// where they start and end.
+  String _factsSection() {
+    final String body = facts.map((KbEntry e) => e.asFact()).join('\n\n');
+    return '''
+## Verified facts from Hodu's guide
+These facts were checked by the app team. When they answer the question, base your answer on them and prefer them over your own memory. If they do not cover the question, answer carefully from general knowledge.
+<facts>
+$body
+</facts>''';
+  }
+
+  String _base() {
     final String date =
         '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
 

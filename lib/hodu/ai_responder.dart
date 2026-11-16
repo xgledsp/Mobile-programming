@@ -3,6 +3,8 @@ import 'chat_message.dart';
 import 'ai_client.dart';
 import 'hodu_prompt.dart';
 import 'hodu_responder.dart';
+import 'knowledge/kb_entry.dart';
+import 'knowledge/knowledge_base.dart';
 
 // ================================================================
 // AI RESPONDER - Hodu's online brain
@@ -25,20 +27,40 @@ class AiResponder implements HoduResponder {
   final int maxHistory;
   final DateTime Function() clock;
 
+  /// When set, the best matching entries are given to the AI as verified
+  /// facts ("grounding"), so its answer agrees with the offline answers.
+  final KnowledgeBase? knowledgeBase;
+  final int maxFacts;
+
   AiResponder({
     required this.client,
     this.language = AppLanguage.english,
     this.maxHistory = 12,
+    this.knowledgeBase,
+    this.maxFacts = 2,
     DateTime Function()? clock,
   }) : clock = clock ?? DateTime.now;
 
   @override
   Future<HoduReply> reply(String question, List<ChatMessage> history) async {
     final List<AiMessage> messages = toApiMessages(history, maxHistory: maxHistory);
-    final String system = HoduPrompt(language: language, today: clock()).build();
+    final String system = HoduPrompt(
+      language: language,
+      today: clock(),
+      facts: factsFor(question),
+    ).build();
 
     final String text = await client.createReply(system: system, messages: messages);
     return HoduReply(text, ReplySource.ai);
+  }
+
+  /// Knowledge-base entries that match [question] (empty without a KB).
+  List<KbEntry> factsFor(String question) {
+    final KnowledgeBase? kb = knowledgeBase;
+    if (kb == null) {
+      return const [];
+    }
+    return kb.search(question, limit: maxFacts).map((KbMatch m) => m.entry).toList();
   }
 
   /// Converts chat bubbles into the list the API accepts (see notes above).
