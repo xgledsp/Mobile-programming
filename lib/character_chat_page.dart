@@ -8,6 +8,7 @@ import 'hodu/hodu_config.dart';
 import 'hodu/chat_message.dart';
 import 'hodu/guarded_responder.dart';
 import 'hodu/hodu_responder.dart';
+import 'hodu/knowledge_responder.dart';
 
 // ================================================================
 // HODU CHAT PAGE
@@ -63,11 +64,11 @@ class _CharacterChatPageState extends State<CharacterChatPage> {
   }
 
   /// Uses the online AI when a key (or proxy) is configured,
-  /// otherwise the offline placeholder.
+  /// otherwise the offline knowledge base.
   HoduResponder _defaultBrain() {
     final HoduConfig config = HoduConfig.fromEnvironment();
     if (!config.isAiEnabled) {
-      return PlaceholderResponder(language: widget.language);
+      return KnowledgeResponder(language: widget.language);
     }
     _client = createAiClient(config);
     return AiResponder(client: _client!, language: widget.language);
