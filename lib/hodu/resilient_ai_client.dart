@@ -60,8 +60,11 @@ class ResilientAiClient implements AiClient {
       try {
         return await client.createReply(system: system, messages: messages);
       } on AiException catch (error) {
-        if (!error.isTemporary) {
-          rethrow; // retrying would not help
+        // A wrong key fails every time, and without internet a retry 2 s
+        // later fails too - report both at once so the app can switch to
+        // offline answers without waiting.
+        if (!error.isTemporary || error.kind == AiErrorKind.network) {
+          rethrow;
         }
         lastError = error;
       }
