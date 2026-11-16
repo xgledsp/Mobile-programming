@@ -30,6 +30,8 @@ Future<void> _openChat(
 }
 
 void main() {
+  sourceLabelTests();
+
   testWidgets('shows the greeting when the chat opens', (WidgetTester tester) async {
     await _openChat(tester, _EchoResponder());
     expect(find.textContaining("I'm Hodu"), findsOneWidget);
@@ -80,5 +82,45 @@ void main() {
 
     expect(find.textContaining('Tap to retry'), findsNothing);
     expect(find.text('Echo: Where is the dorm office?'), findsOneWidget);
+  });
+}
+
+class _SourceResponder implements HoduResponder {
+  final ReplySource source;
+  _SourceResponder(this.source);
+
+  @override
+  Future<HoduReply> reply(String question, List<ChatMessage> history) async =>
+      HoduReply('answer', source);
+}
+
+void sourceLabelTests() {
+  Future<void> askOnce(WidgetTester tester, ReplySource source, AppLanguage language) async {
+    await _openChat(tester, _SourceResponder(source), language: language);
+    await tester.enterText(find.byType(TextField), 'How do I open a bank account?');
+    await tester.pump();
+    await tester.tap(_sendButton);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('knowledge base answers show the "Hodu\'s guide" label', (WidgetTester tester) async {
+    await askOnce(tester, ReplySource.knowledgeBase, AppLanguage.english);
+    expect(find.textContaining("Hodu's guide"), findsOneWidget);
+  });
+
+  testWidgets('AI answers show the "double-check" label', (WidgetTester tester) async {
+    await askOnce(tester, ReplySource.ai, AppLanguage.english);
+    expect(find.textContaining('AI answer'), findsOneWidget);
+  });
+
+  testWidgets('labels are Korean in Korean mode', (WidgetTester tester) async {
+    await askOnce(tester, ReplySource.ai, AppLanguage.korean);
+    expect(find.textContaining('AI 답변'), findsOneWidget);
+  });
+
+  testWidgets('the greeting has no label', (WidgetTester tester) async {
+    await _openChat(tester, _SourceResponder(ReplySource.ai));
+    expect(find.textContaining('AI answer'), findsNothing);
+    expect(find.textContaining("Hodu's guide"), findsNothing);
   });
 }

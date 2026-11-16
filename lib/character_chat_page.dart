@@ -8,6 +8,8 @@ import 'hodu/hodu_config.dart';
 import 'hodu/chat_message.dart';
 import 'hodu/guarded_responder.dart';
 import 'hodu/hodu_responder.dart';
+import 'hodu/hybrid_responder.dart';
+import 'hodu/knowledge/knowledge_base.dart';
 import 'hodu/knowledge_responder.dart';
 
 // ================================================================
@@ -18,8 +20,11 @@ import 'hodu/knowledge_responder.dart';
 //
 //   ChatController  --notifyListeners()-->  ListenableBuilder  --> bubbles
 //
-// The "brain" (HoduResponder) can be passed in from outside. If nothing
-// is passed, the PlaceholderResponder is used.
+// The "brain" (HoduResponder) can be passed in from outside (tests).
+// Otherwise:
+//   AI key set  -> HybridResponder: AI online, knowledge base offline
+//   no AI key   -> KnowledgeResponder: knowledge base only
+// Every brain sits behind the GuardedResponder (topic guard).
 // ================================================================
 
 class CharacterChatPage extends StatefulWidget {
@@ -41,6 +46,7 @@ class CharacterChatPage extends StatefulWidget {
 class _CharacterChatPageState extends State<CharacterChatPage> {
   late final ChatController _chat;
   AiClient? _client;
+  HybridResponder? _hybrid;
   final TextEditingController _input = TextEditingController();
   final ScrollController _scroll = ScrollController();
 
@@ -63,20 +69,36 @@ class _CharacterChatPageState extends State<CharacterChatPage> {
     _input.addListener(() => setState(() {}));
   }
 
-  /// Uses the online AI when a key (or proxy) is configured,
-  /// otherwise the offline knowledge base.
+  /// AI with automatic offline fallback when a key (or proxy) is
+  /// configured, otherwise only the offline knowledge base.
   HoduResponder _defaultBrain() {
+    final KnowledgeResponder offline = KnowledgeResponder(language: widget.language);
     final HoduConfig config = HoduConfig.fromEnvironment();
     if (!config.isAiEnabled) {
-      return KnowledgeResponder(language: widget.language);
+      return offline;
     }
     _client = createAiClient(config);
-    return AiResponder(client: _client!, language: widget.language);
+    _hybrid = HybridResponder(
+      online: AiResponder(
+        client: _client!,
+        language: widget.language,
+        knowledgeBase: const KnowledgeBase(),
+      ),
+      offline: offline,
+    );
+    return _hybrid!;
   }
+
+  /// "Online" in the header: the AI is available and the last request
+  /// did not fail because of the network. Tests that pass their own
+  /// responder are treated as online.
+  bool get _isOnline =>
+      widget.responder != null || (_hybrid?.isOnline.value ?? false);
 
   @override
   void dispose() {
     _client?.close();
+    _hybrid?.dispose();
     _chat.removeListener(_scrollToBottom);
     _chat.dispose();
     _input.dispose();
@@ -162,13 +184,8 @@ class _CharacterChatPageState extends State<CharacterChatPage> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: darkText),
               ),
               ListenableBuilder(
-                listenable: _chat,
-                builder: (BuildContext context, Widget? _) => Text(
-                  _chat.isTyping
-                      ? (_isKorean ? '입력 중...' : 'Typing...')
-                      : (_isKorean ? '온라인' : 'Online'),
-                  style: TextStyle(fontSize: 12, color: Colors.green.shade600),
-                ),
+                listenable: Listenable.merge([_chat, if (_hybrid != null) _hybrid!.isOnline]),
+                builder: (BuildContext context, Widget? _) => _buildStatusText(),
               ),
             ],
           ),
@@ -267,13 +284,15 @@ class _CharacterChatPageState extends State<CharacterChatPage> {
 
   Widget _buildChatBubble(ChatMessage message) {
     final bool isUser = message.isUser;
+    final Widget? label = isUser ? null : _buildSourceLabel(message.source);
+    final bool hasRowBelow = message.isFailed || label != null;
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Column(
         crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Container(
-            margin: EdgeInsets.only(bottom: message.isFailed ? 4 : 16),
+            margin: EdgeInsets.only(bottom: hasRowBelow ? 4 : 16),
             padding: const EdgeInsets.all(16),
             constraints: const BoxConstraints(maxWidth: 300),
             decoration: BoxDecoration(
@@ -302,8 +321,61 @@ class _CharacterChatPageState extends State<CharacterChatPage> {
             ),
           ),
           if (message.isFailed) _buildRetryRow(),
+          if (label != null) label,
         ],
       ),
+    );
+  }
+
+  /// Small line under Hodu's answer that says where it came from.
+  /// AI answers remind the user to double-check important information.
+  Widget? _buildSourceLabel(ReplySource? source) {
+    final IconData icon;
+    final String text;
+    switch (source) {
+      case ReplySource.ai:
+        icon = Icons.auto_awesome;
+        text = _isKorean
+            ? 'AI 답변 · 중요한 정보는 공식 기관에서 확인하세요'
+            : 'AI answer · double-check important info';
+      case ReplySource.knowledgeBase:
+        icon = Icons.menu_book_outlined;
+        text = _isKorean ? '호두 가이드 · 오프라인에서도 사용 가능' : "Hodu's guide · works offline";
+      case ReplySource.guard:
+      case ReplySource.fallback:
+      case null:
+        return null;
+    }
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 16),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: lightText),
+          const SizedBox(width: 4),
+          Text(text, style: const TextStyle(fontSize: 11, color: lightText)),
+        ],
+      ),
+    );
+  }
+
+  /// "Typing..." / "Online" / "Offline mode" under Hodu's name.
+  Widget _buildStatusText() {
+    if (_chat.isTyping) {
+      return Text(
+        _isKorean ? '입력 중...' : 'Typing...',
+        style: TextStyle(fontSize: 12, color: Colors.green.shade600),
+      );
+    }
+    if (_isOnline) {
+      return Text(
+        _isKorean ? '온라인' : 'Online',
+        style: TextStyle(fontSize: 12, color: Colors.green.shade600),
+      );
+    }
+    return Text(
+      _isKorean ? '오프라인 모드' : 'Offline mode',
+      style: TextStyle(fontSize: 12, color: Colors.orange.shade800),
     );
   }
 
