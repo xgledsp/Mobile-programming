@@ -68,7 +68,7 @@ void main() {
     final _EchoResponder responder = _EchoResponder()..fail = true;
     await _openChat(tester, responder);
 
-    await tester.enterText(find.byType(TextField), 'hello');
+    await tester.enterText(find.byType(TextField), 'Where is the dorm office?');
     await tester.testTextInput.receiveAction(TextInputAction.send);
     await tester.pumpAndSettle();
 
@@ -79,6 +79,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Tap to retry'), findsNothing);
-    expect(find.text('Echo: hello'), findsOneWidget);
+    expect(find.text('Echo: Where is the dorm office?'), findsOneWidget);
   });
 }
