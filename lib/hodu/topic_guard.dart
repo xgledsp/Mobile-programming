@@ -1,3 +1,5 @@
+import 'text_match.dart';
+
 // ================================================================
 // HODU TOPIC GUARD - keeps Hodu inside the app's topic
 // ================================================================
@@ -64,7 +66,7 @@ class TopicGuard {
   const TopicGuard();
 
   TopicDecision classify(String rawText) {
-    final String text = _normalize(rawText);
+    final String text = TextMatch.normalize(rawText);
     if (text.isEmpty) {
       return const TopicDecision(TopicVerdict.unclear);
     }
@@ -96,16 +98,6 @@ class TopicGuard {
 
   // ------------------------------------------------------------ helpers
 
-  /// Lower-case, remove punctuation (keep Hangul, letters, digits) and
-  /// collapse spaces.
-  static String _normalize(String text) {
-    return text
-        .toLowerCase()
-        .replaceAll(RegExp(r"[^\p{L}\p{N}\s']", unicode: true), ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-  }
-
   static SmallTalkKind? _smallTalk(String text) {
     // The whole message must be the phrase (Hodu's name may be added:
     // "hi hodu", "고마워 호두야"). Otherwise "hi, how do I open a bank
@@ -127,7 +119,7 @@ class TopicGuard {
   static List<TopicCategory> _matchCategories(String text) {
     final Map<TopicCategory, int> hits = {};
     _topicKeywords.forEach((TopicCategory category, List<String> keywords) {
-      final int count = keywords.where((String k) => _containsKeyword(text, k)).length;
+      final int count = TextMatch.countKeywords(text, keywords);
       if (count > 0) {
         hits[category] = count;
       }
@@ -138,23 +130,7 @@ class TopicGuard {
   }
 
   static bool _matchesAny(String text, List<String> keywords) =>
-      keywords.any((String k) => _containsKeyword(text, k));
-
-  /// Korean (or any non-Latin) keyword: substring match.
-  /// Latin keyword: whole word, optional plural "s" / "es".
-  static bool _containsKeyword(String text, String keyword) {
-    if (!_latin.hasMatch(keyword)) {
-      return text.contains(keyword);
-    }
-    final RegExp? cached = _regexCache[keyword];
-    final RegExp pattern = cached ??
-        (_regexCache[keyword] =
-            RegExp('(^| )${RegExp.escape(keyword)}(s|es)?(?= |\$)'));
-    return pattern.hasMatch(text);
-  }
-
-  static final RegExp _latin = RegExp(r'^[a-z0-9 \x27]+$');
-  static final Map<String, RegExp> _regexCache = {};
+      keywords.any((String k) => TextMatch.containsKeyword(text, k));
 
   // ------------------------------------------------------------ word lists
 
