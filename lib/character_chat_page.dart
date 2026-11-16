@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'app_theme.dart';
+import 'hodu/ai_responder.dart';
 import 'hodu/chat_controller.dart';
+import 'hodu/ai_client.dart';
+import 'hodu/ai_client_factory.dart';
+import 'hodu/hodu_config.dart';
 import 'hodu/chat_message.dart';
+import 'hodu/guarded_responder.dart';
 import 'hodu/hodu_responder.dart';
 
 // ================================================================
@@ -34,6 +39,7 @@ class CharacterChatPage extends StatefulWidget {
 
 class _CharacterChatPageState extends State<CharacterChatPage> {
   late final ChatController _chat;
+  AiClient? _client;
   final TextEditingController _input = TextEditingController();
   final ScrollController _scroll = ScrollController();
 
@@ -43,8 +49,11 @@ class _CharacterChatPageState extends State<CharacterChatPage> {
   void initState() {
     super.initState();
     _chat = ChatController(
-      responder: widget.responder ??
-          PlaceholderResponder(language: widget.language),
+      // The guard always runs first, whatever brain is behind it.
+      responder: GuardedResponder(
+        inner: widget.responder ?? _defaultBrain(),
+        language: widget.language,
+      ),
     );
     _chat.addHoduMessage(_greeting());
     // Every time the chat changes, scroll down to the newest message.
@@ -53,8 +62,20 @@ class _CharacterChatPageState extends State<CharacterChatPage> {
     _input.addListener(() => setState(() {}));
   }
 
+  /// Uses the online AI when a key (or proxy) is configured,
+  /// otherwise the offline placeholder.
+  HoduResponder _defaultBrain() {
+    final HoduConfig config = HoduConfig.fromEnvironment();
+    if (!config.isAiEnabled) {
+      return PlaceholderResponder(language: widget.language);
+    }
+    _client = createAiClient(config);
+    return AiResponder(client: _client!, language: widget.language);
+  }
+
   @override
   void dispose() {
+    _client?.close();
     _chat.removeListener(_scrollToBottom);
     _chat.dispose();
     _input.dispose();
