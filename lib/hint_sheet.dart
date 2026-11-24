@@ -264,7 +264,7 @@ class _HintSheetState extends State<_HintSheet> {
             _buildHintCard(
               label: 'First syllable',
               content: widget.word.hangul.substring(0, 1),
-              highlight: _level == 2, 
+              highlight: _level == 2,
             ),
 
           // Hint 3: full spelling in jamo (ㅎ ㅏ ㄱ ㄱ ㅛ)
@@ -276,16 +276,34 @@ class _HintSheetState extends State<_HintSheet> {
             ),
 
           // Locked preview of the next hint
-          if (_level < 3) _buildLockedCard(), 
+          if (_level < 3) _buildLockedCard(),
 
           const SizedBox(height: 16),
 
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton(
+            height: 52,
+            child: OutlinedButton.icon(
               onPressed: _level < 3 ? _nextHint : null,
-              child: const Text('Next hint'),
+              icon: const Icon(Icons.lightbulb_outline, size: 20),
+              label: Text(
+                // Show a different text when every hint is open.
+                _level < 3 ? 'Next hint' : 'All hints used',
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: primaryBlue, 
+                side: BorderSide(
+                  color: _level < 3 ? primaryBlue : borderGray,
+                  width: 1.5,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.circular(22), 
+                ),
+              ),
             ),
           ),
         ],
