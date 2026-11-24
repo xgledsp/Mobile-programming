@@ -63,48 +63,39 @@ class _OnboardingPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          const Color(0xFFD9D3D5),
+      // White background, like the other pages.
+      backgroundColor: Colors.white,
 
       body: SafeArea(
-        child: Center(
-          child: LayoutBuilder(
-            builder: (
-              BuildContext context,
-              BoxConstraints constraints,
-            ) {
-
-              /*
-                The Figma design is based around
-                a 320 x 568 phone frame.
-
-                We keep the content narrow so that
-                it stays visually close to the
-                supplied Figma design.
-              */
-
-              final double availableWidth =
-                  constraints.maxWidth;
-
-              final double cardWidth =
-                  availableWidth < 360
-                      ? availableWidth - 152
-                      : 208;
-
-              final double actualCardWidth =
-                  cardWidth.clamp(208.0, 220.0);
-
-              return SingleChildScrollView(
-                child: SizedBox(
-                  width: actualCardWidth,
-                  child: _buildMainCard(),
-                ),
-              );
-            },
+        // Same wrapper as the quiz page: full width on phones,
+        // max 600 wide and centered on tablets.
+        child: ResponsiveLayout(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            // Enlarge every text on this page by the same ratio.
+            child: MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(_textScale(context)),
+              ),
+              child: _buildMainCard(),
+            ),
           ),
         ),
       ),
     );
+  }
+
+  /// How much bigger the text should be on this screen.
+  /// The Figma card was about 220 wide, so a card twice as wide
+  /// gets text twice as big (kept between 1.6x and 2.2x).
+  double _textScale(BuildContext context) {
+    final double screenWidth = MediaQuery.sizeOf(context).width;
+
+    // The page is at most 600 wide (ResponsiveLayout), minus 24 + 24 padding.
+    final double pageWidth = screenWidth > 600 ? 600: screenWidth;
+    final double cardWidth = pageWidth - 48;
+
+    return (cardWidth / 200 ).clamp(1.6, 2.2); 
   }
 
   // ==============================================================
@@ -318,12 +309,15 @@ class _OnboardingPageState
 
       child: SizedBox(
         width: double.infinity,
-        height: 160,
+
+        // Image height follows the screen height, so it shrinks on
+        // small screens and grows on big ones.
+        height: MediaQuery.sizeOf(context).height * 0.3,
 
         child: Image.asset(
           'assets/south_korea_panel.png',
 
-          fit: BoxFit.fill,
+          fit: BoxFit.contain,
         ),
       ),
     );
