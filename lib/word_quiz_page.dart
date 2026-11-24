@@ -6,6 +6,7 @@ import 'how_to_play_dialog.dart';
 import 'quiz_session.dart';
 import 'review_page.dart';
 import 'word_data.dart';
+import 'hint_sheet.dart';
 
 enum _QuizStatus { playing, solved, failed }
 
@@ -30,6 +31,8 @@ class _WordQuizPageState extends State<WordQuizPage> {
   List<List<TileState>> _results = [];
   List<String> _current = [];
   _QuizStatus _status = _QuizStatus.playing;
+  int _hintsUsed = 0; // Number of hints used for the current word
+  static const int _maxHints = 3; // Max hints allowed per word
   // Shared with the review screen opened from Home.
   List<ReviewEntry> get _history => QuizSession.instance.history;
 
@@ -130,6 +133,20 @@ class _WordQuizPageState extends State<WordQuizPage> {
     _history.add(ReviewEntry(word: _word, solved: solved));
   }
 
+  /// Opens the hint sheet and keeps the hint count in sync.
+  void _openHint() {
+    showHintSheet(
+      context,
+      word: _word,
+      hintsUsed: _hintsUsed,
+      onHintUsed: (int count) {
+        setState(() {
+          _hintsUsed = count; // Update "N left" on the hint button
+        });
+      },
+    );
+  }
+
   void _openReview() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -157,6 +174,7 @@ class _WordQuizPageState extends State<WordQuizPage> {
       _results = [];
       _current = [];
       _status = _QuizStatus.playing;
+      _hintsUsed = 0; // Reset hints when a new word starts
     });
   }
 
@@ -205,7 +223,8 @@ class _WordQuizPageState extends State<WordQuizPage> {
                         ),
                         IconButton(
                           tooltip: 'How to play',
-                          icon: const Icon(Icons.help_outline, color: lightText),
+                          icon:
+                              const Icon(Icons.help_outline, color: lightText),
                           onPressed: _openHowToPlay,
                         ),
                       ],
@@ -217,6 +236,8 @@ class _WordQuizPageState extends State<WordQuizPage> {
                     const SizedBox(height: 12),
                     _buildStatusText(),
                     _buildLegend(),
+                    const SizedBox(height: 12),
+                    _buildHintButton(),
                     const SizedBox(height: 16),
                     _buildKeyboard(),
                   ],
@@ -282,7 +303,8 @@ class _WordQuizPageState extends State<WordQuizPage> {
             mainAxisSize: MainAxisSize.min,
             children: List.generate(quizMaxCols, (int col) {
               return Padding(
-                padding: EdgeInsets.only(right: col == quizMaxCols - 1 ? 0 : gap),
+                padding:
+                    EdgeInsets.only(right: col == quizMaxCols - 1 ? 0 : gap),
                 child: _buildTile(row, col, tileSize, wordLength),
               );
             }),
@@ -383,6 +405,19 @@ class _WordQuizPageState extends State<WordQuizPage> {
     );
   }
 
+  /// Hint button shown above the keyboard ("Hint · N left").
+  Widget _buildHintButton() {
+    final int left = _maxHints - _hintsUsed; // Remaining hints = max - used
+    return Center(
+      child: OutlinedButton.icon(
+        // Enabled only while playing and when hints are left (null = disabled)
+        onPressed: (_status == _QuizStatus.playing && left > 0) ? _openHint : null,
+        icon: const Icon(Icons.lightbulb_outline),
+        label: Text('Hint · $left left'),
+      ),
+    );
+  }
+
   Widget _buildLegend() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -454,7 +489,8 @@ class _WordQuizPageState extends State<WordQuizPage> {
           height: 46,
           child: Center(
             child: isBackspace
-                ? const Icon(Icons.backspace_outlined, size: 18, color: darkText)
+                ? const Icon(Icons.backspace_outlined,
+                    size: 18, color: darkText)
                 : Text(
                     key,
                     style: TextStyle(
