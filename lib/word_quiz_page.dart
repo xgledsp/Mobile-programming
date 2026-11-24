@@ -411,7 +411,8 @@ class _WordQuizPageState extends State<WordQuizPage> {
     return Center(
       child: OutlinedButton.icon(
         // Enabled only while playing and when hints are left (null = disabled)
-        onPressed: (_status == _QuizStatus.playing && left > 0) ? _openHint : null,
+        onPressed:
+            (_status == _QuizStatus.playing && left > 0) ? _openHint : null,
         icon: const Icon(Icons.lightbulb_outline),
         label: Text('Hint · $left left'),
       ),
@@ -447,14 +448,46 @@ class _WordQuizPageState extends State<WordQuizPage> {
   }
 
   Widget _buildKeyboard() {
+    // Work out the key colors once, then share them with every key.
+    final Map<String, TileState> states = _keyStates();
     return Column(
-      children: quizKeyboardRows.map(_buildKeyRow).toList(),
+      children: quizKeyboardRows
+          .map((List<String> keys) => _buildKeyRow(keys, states))
+          .toList(),
     );
   }
 
   bool _isSpecialKey(String key) => key == 'ENTER' || key == '⌫';
 
-  Widget _buildKeyRow(List<String> keys) {
+  /// Ranks tile results so a better result can replace a worse one.
+  /// correct (blue) > present (orange) > absent (gray).
+  int _rank(TileState state) {
+    if (state == TileState.correct) return 3; // Highest
+    if (state == TileState.present) return 2; // Middle
+    return 1; // absent
+  }
+
+  /// Best result for every letter typed so far, used to color the keyboard.
+  /// Example: if ㄱ was orange once and blue later, ㄱ stays blue.
+  Map<String, TileState> _keyStates() {
+    final Map<String, TileState> states = {};
+
+    for (int row = 0; row < _guesses.length; row++) {
+      for (int col = 0; col < _guesses[row].length; col++) {
+        final String letter = _guesses[row][col];
+        final TileState newState = _results[row][col];
+        final TileState? oldState = states[letter];
+
+        // Save it when the letter is new, or when the new result is better.
+        if (oldState == null || _rank(newState) > _rank(oldState)) {
+          states[letter] = newState;
+        }
+      }
+    }
+    return states;
+  }
+
+  Widget _buildKeyRow(List<String> keys, Map<String, TileState> states) {
     // The middle row has 9 keys, so it is centered with half-key spacers.
     final bool needsSpacers = keys.length == 9 && !keys.contains('ENTER');
     return Padding(
@@ -467,7 +500,7 @@ class _WordQuizPageState extends State<WordQuizPage> {
               flex: _isSpecialKey(key) ? 3 : 2,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: _buildKey(key),
+                child: _buildKey(key, states),
               ),
             ),
           if (needsSpacers) const Spacer(flex: 1),
@@ -476,11 +509,29 @@ class _WordQuizPageState extends State<WordQuizPage> {
     );
   }
 
-  Widget _buildKey(String key) {
+  Widget _buildKey(String key, Map<String, TileState> states) {
     final bool isBackspace = key == '⌫';
     final bool isEnter = key == 'ENTER';
+
+    // Color the key by the best result of this letter.
+    // ENTER and ⌫ are never in the table, so they stay light gray.
+    final TileState? state = states[key];
+    Color keyColor = const Color(0xFFEDEFF1);
+    Color textColor = darkText;
+
+    if (state == TileState.correct) {
+      keyColor = primaryBlue;
+      textColor = Colors.white;
+    } else if (state == TileState.present) {
+      keyColor = tileOrange;
+      textColor = Colors.white;
+    } else if (state == TileState.absent) {
+      keyColor = tileGray;
+      textColor = Colors.white;
+    }
+
     return Material(
-      color: const Color(0xFFEDEFF1),
+      color: keyColor,
       borderRadius: BorderRadius.circular(6),
       child: InkWell(
         borderRadius: BorderRadius.circular(6),
@@ -496,7 +547,7 @@ class _WordQuizPageState extends State<WordQuizPage> {
                     style: TextStyle(
                       fontSize: isEnter ? 11 : 17,
                       fontWeight: FontWeight.w600,
-                      color: darkText,
+                      color: textColor,
                     ),
                   ),
           ),
