@@ -69,6 +69,63 @@ class _WordQuizPageState extends State<WordQuizPage> {
     );
   }
 
+  /// Big popup in the middle of the screen when a word is finished.
+  /// Shows the answer, and "New game" starts a new word right away.
+  Future<void> _showResultDialog(bool solved) async {
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          solved ? 'Correct! 🎉' : 'Nice try!',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: solved ? primaryBlue : tileOrange,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _word.hangul,
+              style: const TextStyle(
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+                color: darkText,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '[${_word.romanization}] · ${_word.meaning}',
+              style: const TextStyle(fontSize: 14, color: lightText),
+            ),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _nextWord();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryBlue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('New game'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _onKey(String key) {
     if (key == 'ENTER') {
       _onEnter();
@@ -122,10 +179,10 @@ class _WordQuizPageState extends State<WordQuizPage> {
 
     if (solved) {
       _recordResult(true);
-      _showMessage('Correct! | 정답이에요!');
+      _showResultDialog(true);
     } else if (_status == _QuizStatus.failed) {
       _recordResult(false);
-      _showMessage('The word was ${_word.hangul} | 정답은 ${_word.hangul}');
+      _showResultDialog(false);
     }
   }
 
@@ -237,7 +294,10 @@ class _WordQuizPageState extends State<WordQuizPage> {
                     _buildStatusText(),
                     _buildLegend(),
                     const SizedBox(height: 12),
-                    _buildHintButton(),
+                    // Hint while playing, New game after the word is finished.
+                    _status == _QuizStatus.playing
+                        ? _buildHintButton()
+                        : _buildNewGameButton(),
                     const SizedBox(height: 16),
                     _buildKeyboard(),
                   ],
@@ -392,8 +452,8 @@ class _WordQuizPageState extends State<WordQuizPage> {
       child: Center(
         child: Text(
           solved
-              ? 'Solved! Tap Review to continue | 정답!'
-              : 'Answer: ${_word.hangul} · Tap Review to continue',
+              ? 'Solved! | 정답!'
+              : 'Answer: ${_word.hangul} | 정답: ${_word.hangul}',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 13,
@@ -415,6 +475,28 @@ class _WordQuizPageState extends State<WordQuizPage> {
             (_status == _QuizStatus.playing && left > 0) ? _openHint : null,
         icon: const Icon(Icons.lightbulb_outline),
         label: Text('Hint · $left left'),
+      ),
+    );
+  }
+
+  /// Shown instead of the hint button after the word is finished.
+  Widget _buildNewGameButton() {
+    return Center(
+      child: ElevatedButton.icon(
+        onPressed: _nextWord,
+        icon: const Icon(Icons.refresh),
+        label: const Text(
+          'New game',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryBlue,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+        ),
       ),
     );
   }
