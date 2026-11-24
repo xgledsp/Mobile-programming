@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'word_data.dart';
 import 'dart:math' as math;
+import 'app_theme.dart';
 
 /// Opens the "Hodu's Hint" bottom sheet for the word quiz.
 /// Hints unlock step by step: meaning -> first syllable -> full spelling.
@@ -14,6 +15,7 @@ void showHintSheet(
   showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.white,
+    showDragHandle: true, // Small gray bar at the top of the sheet
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
@@ -64,6 +66,83 @@ class _HintSheetState extends State<_HintSheet> {
     widget.onHintUsed(_level);
   }
 
+  /// Top row: Hodu avatar, title, progress text and close button.
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        const CircleAvatar(
+          radius: 22,
+          backgroundColor: softBlue,
+          child: Text('🌱', style: TextStyle(fontSize: 22)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Hodu's Hint",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: darkText,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '호두의 힌트 · Hint $_level of 3 unlocked', 
+                style: const TextStyle(fontSize: 12, color: lightText),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          tooltip: 'Close',
+          icon: const Icon(Icons.close, size: 20, color: lightText),
+          style: IconButton.styleFrom(backgroundColor: bgColor),
+          onPressed: () => Navigator.of(context).pop(), 
+        ),
+      ],
+    );
+  }
+  /// Three-part progress bar: Meaning / First syllable / Full spelling.
+  /// Unlocked steps are blue, locked steps are gray.
+  Widget _buildProgressBar() {
+    const List<String> labels = ['Meaning', 'First syllable', 'Full spelling'];
+    return Row(
+      children: List.generate(3, (int i) {
+        // Step i is unlocked when it is below the current level.
+        final bool unlocked = i < _level; 
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: i == 2 ? 0 : 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: unlocked ? primaryBlue : borderGray,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  labels[i],
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: unlocked ? FontWeight.bold : FontWeight.normal,
+                    color: unlocked ? primaryBlue : lightText, 
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -72,8 +151,10 @@ class _HintSheetState extends State<_HintSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Hodu's Hint · $_level of 3"),
-          const SizedBox(height: 12),
+          _buildHeader(),
+          const SizedBox(height: 16),
+           _buildProgressBar(),      
+          const SizedBox(height: 16),
 
           // Hint 1: meaning
           Text('Meaning: ${widget.word.meaning}'),
@@ -83,8 +164,7 @@ class _HintSheetState extends State<_HintSheet> {
             Text('First syllable: ${widget.word.hangul.substring(0, 1)}'),
 
           // Hint 3: full spelling in jamo (ㅎ ㅏ ㄱ ㄱ ㅛ)
-          if (_level >= 3)
-            Text('Full spelling: ${widget.word.jamo.join(' ')}'),
+          if (_level >= 3) Text('Full spelling: ${widget.word.jamo.join(' ')}'),
 
           const SizedBox(height: 16),
           SizedBox(
