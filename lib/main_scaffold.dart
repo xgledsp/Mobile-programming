@@ -1,3 +1,6 @@
+// 하단 Me 로 들어가면 Profile_Page 대신  me_page를 보여주도록 변경. 나중에 edit your profile 버튼 누르면 profile_page 에서 프로필 정보 수정 가능하도록 구현하면 됨. 
+// When the user taps "Me" in the bottom navigation bar, display me_page instead of Profile_Page. Later, the "Edit Your Profile" button should navigate to profile_page, where users can edit their profile information.
+
 import 'package:flutter/material.dart';
 import 'app_theme.dart';
 import 'home_page.dart';

@@ -1,6 +1,7 @@
 // ================================================================
 // ME PAGE DATA MODELS\
 // 일정과 saved journeys의 데이터 구조와 샘플 데이터
+// Data Structures and Sample Data for 'Schedules' and 'Saved Journeys'
 // ================================================================
 //
 // For now the data is hard-coded sample data. Later these lists can be
