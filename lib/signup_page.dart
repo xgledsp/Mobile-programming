@@ -2,9 +2,17 @@ import 'package:flutter/material.dart';
 import 'app_theme.dart';
 import 'main_scaffold.dart';
 
-class SignupPage extends StatelessWidget {
+class SignupPage extends StatefulWidget {
   final AppLanguage language;
   const SignupPage({super.key, required this.language});
+
+  @override
+  State<SignupPage> createState() => _SignupPageState();
+}
+
+class _SignupPageState extends State<SignupPage> {
+  // 처음에는 체크 안 된 상태
+  bool _agreed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -25,23 +33,9 @@ class SignupPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Create your account',
-                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: darkText),
-                  ),
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: const BoxDecoration(
-                      color: primaryBlue,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.language, color: Colors.white),
-                  )
-                ],
+              const Text(
+                'Create your account',
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: darkText),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -62,8 +56,12 @@ class SignupPage extends StatelessWidget {
               Row(
                 children: [
                   Checkbox(
-                    value: true,
-                    onChanged: (v) {},
+                    value: _agreed,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        _agreed = value ?? false;
+                      });
+                    },
                     activeColor: primaryBlue,
                   ),
                   const Expanded(
@@ -80,17 +78,23 @@ class SignupPage extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => MainScaffold(language: language),
-                      ),
-                          (route) => false,
-                    );
-                  },
+                  // 체크 안 했으면 null → 버튼이 눌리지 않음
+                  onPressed: _agreed
+                      ? () {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => MainScaffold(language: widget.language),
+                            ),
+                            (route) => false,
+                          );
+                        }
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryBlue,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: primaryBlue.withOpacity(0.35),
+                    disabledForegroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text('Create account', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),

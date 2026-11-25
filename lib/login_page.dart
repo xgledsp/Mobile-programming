@@ -33,15 +33,7 @@ class LoginPage extends StatelessWidget {
                     'Welcome back!',
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: darkText),
                   ),
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: const BoxDecoration(
-                      color: primaryBlue,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.language, color: Colors.white),
-                  )
+                 
                 ],
               ),
               const SizedBox(height: 8),
@@ -55,16 +47,7 @@ class LoginPage extends StatelessWidget {
               const SizedBox(height: 20),
               _buildTextField('Password', 'Enter your password', isPassword: true),
 
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {},
-                  child: const Text(
-                    'Forgot password?',
-                    style: TextStyle(color: primaryBlue, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
+             
               const SizedBox(height: 20),
 
               SizedBox(
@@ -79,31 +62,15 @@ class LoginPage extends StatelessWidget {
                       ),
                     );
                   },
-                  style: ElevatedButton.styleFrom(
+                                    style: ElevatedButton.styleFrom(
                     backgroundColor: primaryBlue,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text('Log In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
-              const SizedBox(height: 20),
-
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.g_mobiledata, size: 32, color: darkText),
-                  label: const Text(
-                    'Continue with Google',
-                    style: TextStyle(color: darkText, fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: borderGray),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
+              
               const SizedBox(height: 40),
 
               Center(

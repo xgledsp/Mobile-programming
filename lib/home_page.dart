@@ -63,29 +63,9 @@ class HomePage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Hi, Sarah! 안녕하세요',
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: darkText),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          "You've completed 2 initial steps.",
-                          style: TextStyle(fontSize: 13, color: lightText),
-                        ),
-                      ],
-                    ),
-                    const CircleAvatar(
-                      radius: 20,
-                      backgroundColor: primaryBlue,
-                      child: Icon(Icons.person, color: Colors.white),
-                    ),
-                  ],
+                              const Text(
+                  'Hi, 안녕하세요',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: darkText),
                 ),
                 const SizedBox(height: 30),
 
@@ -106,22 +86,9 @@ class HomePage extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Ask Hodu anything',
-                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.white24,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Text('Guide', style: TextStyle(color: Colors.white, fontSize: 10)),
-                            )
-                          ],
+                                                const Text(
+                          'Ask Hodu anything',
+                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 16),
                         Container(
