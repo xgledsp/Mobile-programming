@@ -6,6 +6,7 @@ import 'how_to_play_dialog.dart';
 import 'quiz_session.dart';
 import 'review_page.dart';
 import 'word_data.dart';
+import 'hint_sheet.dart';
 
 enum _QuizStatus { playing, solved, failed }
 
@@ -30,6 +31,8 @@ class _WordQuizPageState extends State<WordQuizPage> {
   List<List<TileState>> _results = [];
   List<String> _current = [];
   _QuizStatus _status = _QuizStatus.playing;
+  int _hintsUsed = 0; // Number of hints used for the current word
+  static const int _maxHints = 3; // Max hints allowed per word
   // Shared with the review screen opened from Home.
   List<ReviewEntry> get _history => QuizSession.instance.history;
 
@@ -63,6 +66,63 @@ class _WordQuizPageState extends State<WordQuizPage> {
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(content: Text(text), duration: const Duration(seconds: 2)),
+    );
+  }
+
+  /// Big popup in the middle of the screen when a word is finished.
+  /// Shows the answer, and "New game" starts a new word right away.
+  Future<void> _showResultDialog(bool solved) async {
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          solved ? 'Correct! 🎉' : 'Nice try!',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: solved ? primaryBlue : tileOrange,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _word.hangul,
+              style: const TextStyle(
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+                color: darkText,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '[${_word.romanization}] · ${_word.meaning}',
+              style: const TextStyle(fontSize: 14, color: lightText),
+            ),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              _nextWord();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryBlue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('New game'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -119,15 +179,29 @@ class _WordQuizPageState extends State<WordQuizPage> {
 
     if (solved) {
       _recordResult(true);
-      _showMessage('Correct! | 정답이에요!');
+      _showResultDialog(true);
     } else if (_status == _QuizStatus.failed) {
       _recordResult(false);
-      _showMessage('The word was ${_word.hangul} | 정답은 ${_word.hangul}');
+      _showResultDialog(false);
     }
   }
 
   void _recordResult(bool solved) {
     _history.add(ReviewEntry(word: _word, solved: solved));
+  }
+
+  /// Opens the hint sheet and keeps the hint count in sync.
+  void _openHint() {
+    showHintSheet(
+      context,
+      word: _word,
+      hintsUsed: _hintsUsed,
+      onHintUsed: (int count) {
+        setState(() {
+          _hintsUsed = count; // Update "N left" on the hint button
+        });
+      },
+    );
   }
 
   void _openReview() {
@@ -157,6 +231,7 @@ class _WordQuizPageState extends State<WordQuizPage> {
       _results = [];
       _current = [];
       _status = _QuizStatus.playing;
+      _hintsUsed = 0; // Reset hints when a new word starts
     });
   }
 
@@ -205,7 +280,8 @@ class _WordQuizPageState extends State<WordQuizPage> {
                         ),
                         IconButton(
                           tooltip: 'How to play',
-                          icon: const Icon(Icons.help_outline, color: lightText),
+                          icon:
+                              const Icon(Icons.help_outline, color: lightText),
                           onPressed: _openHowToPlay,
                         ),
                       ],
@@ -217,6 +293,11 @@ class _WordQuizPageState extends State<WordQuizPage> {
                     const SizedBox(height: 12),
                     _buildStatusText(),
                     _buildLegend(),
+                    const SizedBox(height: 12),
+                    // Hint while playing, New game after the word is finished.
+                    _status == _QuizStatus.playing
+                        ? _buildHintButton()
+                        : _buildNewGameButton(),
                     const SizedBox(height: 16),
                     _buildKeyboard(),
                   ],
@@ -282,7 +363,8 @@ class _WordQuizPageState extends State<WordQuizPage> {
             mainAxisSize: MainAxisSize.min,
             children: List.generate(quizMaxCols, (int col) {
               return Padding(
-                padding: EdgeInsets.only(right: col == quizMaxCols - 1 ? 0 : gap),
+                padding:
+                    EdgeInsets.only(right: col == quizMaxCols - 1 ? 0 : gap),
                 child: _buildTile(row, col, tileSize, wordLength),
               );
             }),
@@ -370,13 +452,49 @@ class _WordQuizPageState extends State<WordQuizPage> {
       child: Center(
         child: Text(
           solved
-              ? 'Solved! Tap Review to continue | 정답!'
-              : 'Answer: ${_word.hangul} · Tap Review to continue',
+              ? 'Solved! | 정답!'
+              : 'Answer: ${_word.hangul} | 정답: ${_word.hangul}',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.bold,
             color: solved ? primaryBlue : tileOrange,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Hint button shown above the keyboard ("Hint · N left").
+  Widget _buildHintButton() {
+    final int left = _maxHints - _hintsUsed; // Remaining hints = max - used
+    return Center(
+      child: OutlinedButton.icon(
+        // Enabled only while playing and when hints are left (null = disabled)
+        onPressed:
+            (_status == _QuizStatus.playing && left > 0) ? _openHint : null,
+        icon: const Icon(Icons.lightbulb_outline),
+        label: Text('Hint · $left left'),
+      ),
+    );
+  }
+
+  /// Shown instead of the hint button after the word is finished.
+  Widget _buildNewGameButton() {
+    return Center(
+      child: ElevatedButton.icon(
+        onPressed: _nextWord,
+        icon: const Icon(Icons.refresh),
+        label: const Text(
+          'New game',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryBlue,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
           ),
         ),
       ),
@@ -412,14 +530,46 @@ class _WordQuizPageState extends State<WordQuizPage> {
   }
 
   Widget _buildKeyboard() {
+    // Work out the key colors once, then share them with every key.
+    final Map<String, TileState> states = _keyStates();
     return Column(
-      children: quizKeyboardRows.map(_buildKeyRow).toList(),
+      children: quizKeyboardRows
+          .map((List<String> keys) => _buildKeyRow(keys, states))
+          .toList(),
     );
   }
 
   bool _isSpecialKey(String key) => key == 'ENTER' || key == '⌫';
 
-  Widget _buildKeyRow(List<String> keys) {
+  /// Ranks tile results so a better result can replace a worse one.
+  /// correct (blue) > present (orange) > absent (gray).
+  int _rank(TileState state) {
+    if (state == TileState.correct) return 3; // Highest
+    if (state == TileState.present) return 2; // Middle
+    return 1; // absent
+  }
+
+  /// Best result for every letter typed so far, used to color the keyboard.
+  /// Example: if ㄱ was orange once and blue later, ㄱ stays blue.
+  Map<String, TileState> _keyStates() {
+    final Map<String, TileState> states = {};
+
+    for (int row = 0; row < _guesses.length; row++) {
+      for (int col = 0; col < _guesses[row].length; col++) {
+        final String letter = _guesses[row][col];
+        final TileState newState = _results[row][col];
+        final TileState? oldState = states[letter];
+
+        // Save it when the letter is new, or when the new result is better.
+        if (oldState == null || _rank(newState) > _rank(oldState)) {
+          states[letter] = newState;
+        }
+      }
+    }
+    return states;
+  }
+
+  Widget _buildKeyRow(List<String> keys, Map<String, TileState> states) {
     // The middle row has 9 keys, so it is centered with half-key spacers.
     final bool needsSpacers = keys.length == 9 && !keys.contains('ENTER');
     return Padding(
@@ -432,7 +582,7 @@ class _WordQuizPageState extends State<WordQuizPage> {
               flex: _isSpecialKey(key) ? 3 : 2,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: _buildKey(key),
+                child: _buildKey(key, states),
               ),
             ),
           if (needsSpacers) const Spacer(flex: 1),
@@ -441,11 +591,29 @@ class _WordQuizPageState extends State<WordQuizPage> {
     );
   }
 
-  Widget _buildKey(String key) {
+  Widget _buildKey(String key, Map<String, TileState> states) {
     final bool isBackspace = key == '⌫';
     final bool isEnter = key == 'ENTER';
+
+    // Color the key by the best result of this letter.
+    // ENTER and ⌫ are never in the table, so they stay light gray.
+    final TileState? state = states[key];
+    Color keyColor = const Color(0xFFEDEFF1);
+    Color textColor = darkText;
+
+    if (state == TileState.correct) {
+      keyColor = primaryBlue;
+      textColor = Colors.white;
+    } else if (state == TileState.present) {
+      keyColor = tileOrange;
+      textColor = Colors.white;
+    } else if (state == TileState.absent) {
+      keyColor = tileGray;
+      textColor = Colors.white;
+    }
+
     return Material(
-      color: const Color(0xFFEDEFF1),
+      color: keyColor,
       borderRadius: BorderRadius.circular(6),
       child: InkWell(
         borderRadius: BorderRadius.circular(6),
@@ -454,13 +622,14 @@ class _WordQuizPageState extends State<WordQuizPage> {
           height: 46,
           child: Center(
             child: isBackspace
-                ? const Icon(Icons.backspace_outlined, size: 18, color: darkText)
+                ? const Icon(Icons.backspace_outlined,
+                    size: 18, color: darkText)
                 : Text(
                     key,
                     style: TextStyle(
                       fontSize: isEnter ? 11 : 17,
                       fontWeight: FontWeight.w600,
-                      color: darkText,
+                      color: textColor,
                     ),
                   ),
           ),

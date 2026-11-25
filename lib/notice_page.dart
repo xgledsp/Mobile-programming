@@ -11,10 +11,8 @@ class NoticePage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: darkText),
-          onPressed: () => Navigator.pop(context),
-        ),
+        // This page is a bottom tab, so there is nothing to go back to.
+        automaticallyImplyLeading: false,
         title: const Text('Notice Explained', style: TextStyle(color: darkText, fontWeight: FontWeight.bold, fontSize: 18)),
       ),
       body: ResponsiveLayout(
