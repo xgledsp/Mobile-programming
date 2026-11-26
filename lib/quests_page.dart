@@ -3,6 +3,7 @@ import 'app_theme.dart';
 import 'quest_data.dart';
 import 'quest_icons.dart';
 import 'quest_sheet.dart';
+import 'trip_settings_sheet.dart';
 
 class QuestsPage extends StatefulWidget {
   const QuestsPage({super.key});
@@ -58,16 +59,17 @@ class _QuestsPageState extends State<QuestsPage> {
                             color: darkText),
                       ),
                     ),
-                    ElevatedButton(
-                      onPressed: () {}, // TODO: open the documents page
+                    ElevatedButton.icon(
+                      onPressed: _openTripSettings,
+                      icon: const Icon(Icons.settings_outlined, size: 18),
+                      label: const Text('Trip settings',
+                          style: TextStyle(fontSize: 12)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryBlue,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20)),
                       ),
-                      child: const Text('input your documents',
-                          style: TextStyle(fontSize: 12)),
                     ),
                   ],
                 ),
@@ -143,6 +145,10 @@ class _QuestsPageState extends State<QuestsPage> {
                   _buildArrivalSummary(),
                   const SizedBox(height: 16),
                   if (_quests.isEmpty) _buildEmptyState(),
+                  if (_allDone) ...[
+                    _buildAllDone(),
+                    const SizedBox(height: 16),
+                  ],
                   if (_quests.isNotEmpty) _buildMyQuests(),
                   if (!_settings.hideRecommendations &&
                       _recommendations.isNotEmpty) ...[
@@ -308,6 +314,14 @@ class _QuestsPageState extends State<QuestsPage> {
     );
   }
 
+  /// Opens Trip settings and saves the new values.
+  Future<void> _openTripSettings() async {
+    final TripSettings? updated = await showTripSettingsSheet(context, _settings);
+    if (updated == null) return; // Closed without saving
+    setState(() => _settings = updated);
+    await QuestStore.instance.saveSettings(updated);
+  }
+
   /// Opens the "Create a quest" sheet and adds the new quest.
   /// All create buttons (empty state, list header, all done) call this.
   Future<void> _openCreateQuest() async {
@@ -411,6 +425,56 @@ class _QuestsPageState extends State<QuestsPage> {
     );
   }
 
+  /// True when there is at least one quest and every quest is done.
+  bool get _allDone => _quests.isNotEmpty && _quests.every((Quest q) => q.done);
+
+  /// The first unfinished quest, shown as "In progress". Null if all are done.
+  Quest? get _currentQuest {
+    for (final Quest q in _quests) {
+      if (!q.done) return q;
+    }
+    return null;
+  }
+
+  /// Celebration card shown when every arrival quest is done.
+  Widget _buildAllDone() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: softBlue,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: primaryBlue.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          const Text('🎉', style: TextStyle(fontSize: 36)),
+          const SizedBox(height: 8),
+          const Text(
+            'All arrival quests done!',
+            style: TextStyle(
+                fontSize: 18, fontWeight: FontWeight.w800, color: darkText),
+          ),
+          const Text(
+            '입국 퀘스트를 모두 끝냈어요',
+            style: TextStyle(fontSize: 13, color: lightText),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _openCreateQuest,
+            icon: const Icon(Icons.add),
+            label: const Text('Go create more quests'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryBlue,
+              foregroundColor: Colors.white,
+              shape: const StadiumBorder(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Icon for a quest, looked up by its icon key.
   /// Falls back to the flag if the key is unknown.
   IconData _iconFor(Quest quest) {
@@ -501,12 +565,17 @@ class _QuestsPageState extends State<QuestsPage> {
 
   /// One quest: check circle, titles, and a Done or Undo button.
   Widget _buildMyQuestTile(Quest quest) {
+    final bool inProgress = quest == _currentQuest;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderGray),
+        border: Border.all(
+          color: inProgress ? primaryBlue : borderGray,
+          width: inProgress ? 1.5 : 1,
+        ),
       ),
       child: Row(
         children: [
@@ -529,6 +598,16 @@ class _QuestsPageState extends State<QuestsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (inProgress)
+                  const Text(
+                    'IN PROGRESS | 진행 중',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                      color: primaryBlue,
+                    ),
+                  ),
                 Text(
                   quest.title,
                   style: TextStyle(
