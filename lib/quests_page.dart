@@ -176,7 +176,8 @@ class _QuestsPageState extends State<QuestsPage> {
     return departure.difference(today).inDays;
   }
 
-  /// Top card of the Return tab: D-day, or a prompt to set the return date.
+  /// Blue card at the top of the Return tab (same style as Arrival):
+  /// the return D-day, or a prompt to set the return date.
   Widget _buildDepartureCard() {
     final DateTime? departure = _settings.departureDate;
     final int? days = _daysUntilDeparture;
@@ -187,7 +188,7 @@ class _QuestsPageState extends State<QuestsPage> {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: softBlue,
+          color: primaryBlue,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
@@ -196,17 +197,21 @@ class _QuestsPageState extends State<QuestsPage> {
             const Text(
               'Enter your return date.',
               style: TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.w800, color: darkText),
+                  fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white),
             ),
             const Text(
               '귀국 날짜를 입력해 주세요',
-              style: TextStyle(fontSize: 13, color: lightText),
+              style: TextStyle(fontSize: 13, color: Colors.white70),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: _openTripSettings,
               icon: const Icon(Icons.settings_outlined, size: 18),
               label: const Text('Open Trip settings'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: const BorderSide(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -217,26 +222,26 @@ class _QuestsPageState extends State<QuestsPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: softBlue,
+        color: primaryBlue,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'DEPARTURE IN | 출국까지',
+            'RETURN IN | 귀국까지',
             style: TextStyle(
-                fontSize: 11, fontWeight: FontWeight.bold, color: primaryBlue),
+                fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70),
           ),
           const SizedBox(height: 4),
           Text(
-            days > 0 ? 'D-$days' : (days == 0 ? 'D-Day' : 'Departed'),
+            days > 0 ? 'D-$days' : (days == 0 ? 'D-Day' : 'Back home'),
             style: const TextStyle(
-                fontSize: 32, fontWeight: FontWeight.w800, color: darkText),
+                fontSize: 32, fontWeight: FontWeight.w800, color: Colors.white),
           ),
           Text(
             '${_formatDate(departure)}, ${departure.year}',
-            style: const TextStyle(fontSize: 12, color: lightText),
+            style: const TextStyle(fontSize: 12, color: Colors.white70),
           ),
         ],
       ),

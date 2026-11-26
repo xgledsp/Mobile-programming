@@ -80,7 +80,7 @@ class _TripSettingsSheetState extends State<_TripSettingsSheet> {
     });
   }
 
-  /// Departure can be from the day after arrival to 2 years after arrival.
+  /// Return date can be from the day after arrival to 2 years after arrival.
   Future<void> _pickDeparture() async {
     final DateTime start = _arrival ?? _today;
     final DateTime first = start.add(const Duration(days: 1));
@@ -91,7 +91,7 @@ class _TripSettingsSheetState extends State<_TripSettingsSheet> {
       initialDate: _clamp(_departure ?? first, first, last),
       firstDate: first,
       lastDate: last,
-      helpText: 'Departure date · 출국일',
+      helpText: 'Return date · 귀국일',
     );
     if (picked == null) return;
     setState(() {
@@ -107,7 +107,7 @@ class _TripSettingsSheetState extends State<_TripSettingsSheet> {
 
     // Example: arrival was changed to a day after the departure date.
     if (arrival != null && departure != null && !departure.isAfter(arrival)) {
-      setState(() => _error = 'Departure date must be after arrival.');
+      setState(() => _error = 'Return date must be after arrival.');
       return;
     }
 
@@ -146,7 +146,7 @@ class _TripSettingsSheetState extends State<_TripSettingsSheet> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.flight_takeoff, color: primaryBlue),
-            title: const Text('Departure date · 출국일'),
+            title: const Text('Return date · 귀국일'),
             subtitle: Text(_format(_departure)),
             trailing:
                 const Icon(Icons.edit_calendar_outlined, color: lightText),
