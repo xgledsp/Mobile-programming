@@ -8,19 +8,25 @@ class NoticePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        // This page is a bottom tab, so there is nothing to go back to.
-        automaticallyImplyLeading: false,
-        title: const Text('Notice Explained', style: TextStyle(color: darkText, fontWeight: FontWeight.bold, fontSize: 18)),
-      ),
-      body: ResponsiveLayout(
+      body: SafeArea(
+        child: ResponsiveLayout(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Page title, same style as Home / Quests / Me.
+              const Text(
+                'Notice Explained',
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: darkText),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                '공지 해설 · AI',
+                style: TextStyle(fontSize: 13, color: lightText),
+              ),
+              const SizedBox(height: 20),
+
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -93,6 +99,7 @@ class NoticePage extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

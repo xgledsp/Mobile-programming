@@ -8,34 +8,39 @@ class CulturePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        // This page is a bottom tab, so there is nothing to go back to.
-        automaticallyImplyLeading: false,
-        title: const Text('Culture Coach', style: TextStyle(color: darkText, fontWeight: FontWeight.bold, fontSize: 18)),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: primaryBlue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text('Quiz Mode', style: TextStyle(color: primaryBlue, fontSize: 12, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          )
-        ],
-      ),
-      body: ResponsiveLayout(
+      body: SafeArea(
+        child: ResponsiveLayout(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Page title, same style as Home / Quests / Me.
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Culture Coach',
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: darkText),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: primaryBlue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text('Quiz Mode', style: TextStyle(color: primaryBlue, fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                '문화 상황 해설 · Why did that happen?',
+                style: TextStyle(fontSize: 13, color: lightText),
+              ),
+              const SizedBox(height: 20),
+
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -84,6 +89,7 @@ class CulturePage extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

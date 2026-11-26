@@ -63,9 +63,9 @@ class HomePage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                              const Text(
+                const Text(
                   'Hi, 안녕하세요',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: darkText),
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: darkText),
                 ),
                 const SizedBox(height: 30),
 
