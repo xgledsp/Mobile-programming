@@ -116,6 +116,7 @@ class _TripSettingsSheetState extends State<_TripSettingsSheet> {
       departureDate: departure,
       hideCompleted: _hideCompleted,
       hideRecommendations: widget.current.hideRecommendations,
+      hideReturnRecommendations: widget.current.hideReturnRecommendations,
     );
     Navigator.of(context).pop(result);
   }

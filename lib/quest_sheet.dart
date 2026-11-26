@@ -5,7 +5,12 @@ import 'quest_icons.dart';
 
 /// Opens the sheet to create a new quest, or to edit [quest] if one is given.
 /// Returns the saved quest, or null if the user closed the sheet.
-Future<Quest?> showQuestSheet(BuildContext context, {Quest? quest}) {
+Future<Quest?> showQuestSheet(
+  BuildContext context, {
+  Quest? quest,
+  bool isReturn = false, // true on the Return tab: shows the time group picker
+  String? phase, // Time group picked in advance (e.g. "+ Add" in a group)
+}) {
   return showModalBottomSheet<Quest>(
     context: context,
     isScrollControlled: true,
@@ -14,14 +19,16 @@ Future<Quest?> showQuestSheet(BuildContext context, {Quest? quest}) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    builder: (BuildContext context) => _QuestSheet(quest: quest),
+    builder: (BuildContext context) =>
+        _QuestSheet(quest: quest, isReturn: isReturn, initialPhase: phase),
   );
 }
 
 class _QuestSheet extends StatefulWidget {
   final Quest? quest; // null = create a new quest
-
-  const _QuestSheet({this.quest});
+  final bool isReturn;
+  final String? initialPhase;
+  const _QuestSheet({this.quest, this.isReturn = false, this.initialPhase});
 
   @override
   State<_QuestSheet> createState() => _QuestSheetState();
@@ -31,6 +38,7 @@ class _QuestSheetState extends State<_QuestSheet> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _titleKoController = TextEditingController();
   String _iconKey = 'flag';
+  String _phase = 'anytime';
   String? _error; // Shown under the title box when it is empty
 
   bool get _isEditing => widget.quest != null;
@@ -38,6 +46,8 @@ class _QuestSheetState extends State<_QuestSheet> {
   @override
   void initState() {
     super.initState();
+    // Edit: the quest's own group. "+ Add" in a group: that group.
+    _phase = widget.quest?.phase ?? widget.initialPhase ?? 'anytime';
     final Quest? quest = widget.quest;
     if (quest != null) {
       // Edit: start with the quest's current values.
@@ -70,6 +80,7 @@ class _QuestSheetState extends State<_QuestSheet> {
       title: title,
       titleKo: _titleKoController.text.trim(),
       iconKey: _iconKey,
+      phase: _phase,
       done: old?.done ?? false,
     );
     Navigator.of(context).pop(saved);
@@ -80,7 +91,10 @@ class _QuestSheetState extends State<_QuestSheet> {
     return Padding(
       // Extra bottom space so the keyboard does not cover the sheet.
       padding: EdgeInsets.fromLTRB(
-        20, 0, 20, 20 + MediaQuery.of(context).viewInsets.bottom,
+        20,
+        0,
+        20,
+        20 + MediaQuery.of(context).viewInsets.bottom,
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -89,7 +103,8 @@ class _QuestSheetState extends State<_QuestSheet> {
           children: [
             Text(
               _isEditing ? 'Edit quest · 퀘스트 수정' : 'New quest · 새 퀘스트',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: darkText),
+              style: const TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.w800, color: darkText),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -98,7 +113,8 @@ class _QuestSheetState extends State<_QuestSheet> {
                 labelText: 'Title (English)',
                 hintText: 'e.g. Get a T-money card',
                 errorText: _error,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
               // Hide the error as soon as the user starts typing.
               onChanged: (_) {
@@ -111,13 +127,15 @@ class _QuestSheetState extends State<_QuestSheet> {
               decoration: InputDecoration(
                 labelText: 'Title (Korean, optional)',
                 hintText: '예: 교통카드 만들기',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
             const SizedBox(height: 16),
             const Text(
               'Icon · 아이콘',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: darkText),
+              style: TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.bold, color: darkText),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -127,6 +145,29 @@ class _QuestSheetState extends State<_QuestSheet> {
                 for (final String key in questIcons.keys) _buildIconChoice(key),
               ],
             ),
+            if (widget.isReturn) ...[
+              const SizedBox(height: 16),
+              const Text(
+                'When · 언제 할까요?',
+                style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.bold, color: darkText),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final String p in returnPhases)
+                    ChoiceChip(
+                      avatar: Icon(phaseIcons[p], size: 16),
+                      label: Text(phaseTitles[p] ?? p),
+                      showCheckmark: false,
+                      selected: _phase == p,
+                      onSelected: (_) => setState(() => _phase = p),
+                    ),
+                ],
+              ),
+            ],
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -136,7 +177,8 @@ class _QuestSheetState extends State<_QuestSheet> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryBlue,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
                 ),
                 child: Text(
                   _isEditing ? 'Save · 저장' : 'Add quest · 추가',
