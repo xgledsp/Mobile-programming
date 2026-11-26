@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'app_theme.dart';
+import 'quest_data.dart';
 
 class QuestsPage extends StatefulWidget {
   const QuestsPage({super.key});
@@ -11,6 +12,27 @@ class QuestsPage extends StatefulWidget {
 class _QuestsPageState extends State<QuestsPage> {
   // false = Arrival tab, true = Return tab.
   bool _showReturn = false;
+
+  // Data from QuestStore (filled in by _loadData).
+  List<Quest> _quests = [];
+  TripSettings _settings = TripSettings();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  /// Reads quests and settings from the store, then redraws the page.
+  Future<void> _loadData() async {
+    final List<Quest> quests = await QuestStore.instance.loadQuests();
+    final TripSettings settings = await QuestStore.instance.loadSettings();
+    if (!mounted) return; // The page may be closed while waiting
+    setState(() {
+      _quests = quests;
+      _settings = settings;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +50,10 @@ class _QuestsPageState extends State<QuestsPage> {
                     const Expanded(
                       child: Text(
                         'Quests',
-                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: darkText),
+                        style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            color: darkText),
                       ),
                     ),
                     ElevatedButton(
@@ -36,9 +61,11 @@ class _QuestsPageState extends State<QuestsPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryBlue,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20)),
                       ),
-                      child: const Text('input your documents', style: TextStyle(fontSize: 12)),
+                      child: const Text('input your documents',
+                          style: TextStyle(fontSize: 12)),
                     ),
                   ],
                 ),
@@ -53,59 +80,435 @@ class _QuestsPageState extends State<QuestsPage> {
 
                 // Return tab content (redesigned in Q3).
                 if (_showReturn) ...[
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: borderGray),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: borderGray),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('D-12',
+                                style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryBlue)),
+                            Text('Dec 30, 2026',
+                                style:
+                                    TextStyle(fontSize: 12, color: lightText)),
+                          ],
+                        ),
+                        TextButton(
+                          onPressed: () {},
+                          child: const Text('Return 타이머',
+                              style: TextStyle(color: primaryBlue)),
+                        )
+                      ],
+                    ),
                   ),
-                  child: Row(
+                  const SizedBox(height: 30),
+                  const Text('Pack your suitcase',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: darkText)),
+                  const SizedBox(height: 8),
+                  const Text('(목표: 4/4) Collect 4 essential items',
+                      style: TextStyle(fontSize: 13, color: lightText)),
+                  const SizedBox(height: 20),
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('D-12', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: primaryBlue)),
-                          Text('Dec 30, 2026', style: TextStyle(fontSize: 12, color: lightText)),
-                        ],
-                      ),
-                      TextButton(
-                        onPressed: () {},
-                        child: const Text('Return 타이머', style: TextStyle(color: primaryBlue)),
-                      )
+                      _buildSuitcaseItem(Icons.sim_card, 'SIM'),
+                      _buildSuitcaseItem(Icons.credit_card, 'Bank card'),
+                      _buildSuitcaseItem(Icons.money, 'Cash'),
+                      _buildSuitcaseItem(Icons.badge, 'ARC'),
                     ],
                   ),
-                ),
-                const SizedBox(height: 30),
-
-                const Text('Pack your suitcase', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: darkText)),
-                const SizedBox(height: 8),
-                const Text('(목표: 4/4) Collect 4 essential items', style: TextStyle(fontSize: 13, color: lightText)),
-                const SizedBox(height: 20),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildSuitcaseItem(Icons.sim_card, 'SIM'),
-                    _buildSuitcaseItem(Icons.credit_card, 'Bank card'),
-                    _buildSuitcaseItem(Icons.money, 'Cash'),
-                    _buildSuitcaseItem(Icons.badge, 'ARC'),
-                  ],
-                ),
-                const SizedBox(height: 30),
-
-                _buildQuestTile(Icons.phone_iphone, 'Carpool phone plan', '통신사 요금제 (KT, SKT, LG U+)'),
-                const SizedBox(height: 12),
-                _buildQuestTile(Icons.account_balance, 'Clone bank account', '은행 계좌 개설하기'),
+                  const SizedBox(height: 30),
+                  _buildQuestTile(
+                      Icons.phone_iphone, 'Carpool phone plan', '통신사 요금제'),
+                  const SizedBox(height: 12),
+                  _buildQuestTile(Icons.account_balance, 'Clone bank account',
+                      '은행 계좌 개설하기'),
                 ] else ...[
-                  // Arrival tab content (filled in Q2).
-                  const Text('Arrival quests will be here.'),
+                  // Arrival tab content.
+                  _buildArrivalSummary(),
+                  const SizedBox(height: 16),
+                  if (_quests.isEmpty) _buildEmptyState(),
+                  if (_quests.isNotEmpty)
+                    _buildMyQuests(), 
+                  if (!_settings.hideRecommendations &&
+                      _recommendations.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _buildRecommendations(),
+                  ],
                 ],
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  static const List<String> _months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  /// Short date text like "Sep 1".
+  String _formatDate(DateTime date) {
+    return '${_months[date.month - 1]} ${date.day}';
+  }
+
+  /// Blue summary card at the top of the Arrival tab.
+  Widget _buildArrivalSummary() {
+    final int total = _quests.length;
+    final int done = _quests.where((Quest q) => q.done).length;
+    final DateTime? arrival = _settings.arrivalDate;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: primaryBlue,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                total == 0 ? '0' : '$done / $total',
+                style: const TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      total == 0
+                          ? 'arrival quests created'
+                          : 'arrival quests done',
+                      style: const TextStyle(fontSize: 14, color: Colors.white),
+                    ),
+                    Text(
+                      total == 0 ? '생성한 입국 퀘스트' : '완료한 입국 퀘스트',
+                      style:
+                          const TextStyle(fontSize: 12, color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (total == 0)
+            const Text(
+              'Your journey starts with your first quest.',
+              style: TextStyle(fontSize: 13, color: Colors.white),
+            ),
+          Text(
+            arrival == null
+                ? 'Add your arrival date in Trip settings'
+                : 'Arrived ${_formatDate(arrival)}',
+            style: const TextStyle(fontSize: 12, color: Colors.white70),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Shown when the user has no arrival quests yet.
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderGray),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: softBlue,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child:
+                const Icon(Icons.flag_outlined, color: primaryBlue, size: 28),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Your first quest awaits',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontSize: 22, fontWeight: FontWeight.w800, color: darkText),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            '아직 만든 퀘스트가 없어요',
+            style: TextStyle(
+                fontSize: 14, fontWeight: FontWeight.bold, color: darkText),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Choose what you want to do first in Korea.\n'
+            '한국에서 시작할 나만의 목표를 정해보세요.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, height: 1.4, color: lightText),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton.icon(
+              onPressed: _openCreateQuest,
+              icon: const Icon(Icons.add),
+              label: const Text(
+                'Create a quest · 퀘스트 만들기',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Opens the "Create a quest" sheet.
+  /// All create buttons (empty state, list header, all done) call this.
+  void _openCreateQuest() {
+    // TODO: show the create quest bottom sheet.
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Create a quest is coming soon')),
+    );
+  }
+
+  /// Recommended quests that are not in the user's list yet.
+  /// Adding one removes it from here automatically (no duplicates).
+  List<Quest> get _recommendations {
+    final Set<String> myIds = _quests.map((Quest q) => q.id).toSet();
+    return recommendedArrivalQuests()
+        .where((Quest q) => !myIds.contains(q.id))
+        .toList();
+  }
+
+  /// Adds a quest to the user's list and saves it.
+  Future<void> _addQuest(Quest quest) async {
+    setState(() {
+      _quests.add(quest);
+    });
+    await QuestStore.instance.saveQuests(_quests);
+  }
+
+  /// Hides the recommended quests box for good (saved in settings).
+  Future<void> _hideRecommendations() async {
+    setState(() {
+      _settings.hideRecommendations = true;
+    });
+    await QuestStore.instance.saveSettings(_settings);
+  }
+
+  /// "Recommended quests" box with a close button.
+  Widget _buildRecommendations() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Recommended quests · 추천으로 시작하기',
+                style: TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.bold, color: darkText),
+              ),
+            ),
+            IconButton(
+              tooltip:
+                  'Hide recommendations', // Shown when the mouse is over it
+              icon: const Icon(Icons.close, size: 18, color: lightText),
+              onPressed: _hideRecommendations,
+            ),
+          ],
+        ),
+        for (final Quest quest in _recommendations) ...[
+          _buildRecommendationTile(quest),
+          const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+
+  /// One recommended quest with a "+" button.
+  Widget _buildRecommendationTile(Quest quest) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: softBlue,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.flight_land, color: primaryBlue, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  quest.title,
+                  style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: darkText),
+                ),
+                Text(
+                  quest.titleKo,
+                  style: const TextStyle(fontSize: 12, color: lightText),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Add to my quests',
+            icon: const Icon(Icons.add_circle, color: primaryBlue),
+            onPressed: () => _addQuest(quest),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Marks a quest as done, or undoes it, then saves.
+  Future<void> _toggleDone(Quest quest) async {
+    setState(() {
+      quest.done = !quest.done;
+    });
+    await QuestStore.instance.saveQuests(_quests);
+  }
+
+  /// The user's own quest list, with a "New quest" button on top.
+  Widget _buildMyQuests() {
+    // When "hide completed" is on, show only unfinished quests.
+    final List<Quest> visible = _settings.hideCompleted
+        ? _quests.where((Quest q) => !q.done).toList()
+        : _quests;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'My quests · 내 퀘스트',
+                style: TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.bold, color: darkText),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: _openCreateQuest,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('New quest'),
+            ),
+          ],
+        ),
+        for (final Quest quest in visible) ...[
+          _buildMyQuestTile(quest),
+          const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+
+  /// One quest: check circle, titles, and a Done or Undo button.
+  Widget _buildMyQuestTile(Quest quest) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderGray),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            quest.done ? Icons.check_circle : Icons.radio_button_unchecked,
+            color: quest.done ? primaryBlue : borderGray,
+            size: 28,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  quest.title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: quest.done ? lightText : darkText,
+                  ),
+                ),
+                Text(
+                  quest.titleKo,
+                  style: const TextStyle(fontSize: 12, color: lightText),
+                ),
+              ],
+            ),
+          ),
+          quest.done
+              ? OutlinedButton.icon(
+                  onPressed: () => _toggleDone(quest),
+                  icon: const Icon(Icons.undo, size: 16),
+                  label: const Text('Undo · 취소'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: lightText,
+                    shape: const StadiumBorder(),
+                  ),
+                )
+              : ElevatedButton(
+                  onPressed: () => _toggleDone(quest),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryBlue,
+                    foregroundColor: Colors.white,
+                    shape: const StadiumBorder(),
+                  ),
+                  child: const Text('Done · 완료'),
+                ),
+        ],
       ),
     );
   }
@@ -130,7 +533,7 @@ class _QuestsPageState extends State<QuestsPage> {
           ),
           Expanded(
             child: _buildTabButton(
-              icon: Icons.luggage_outlined,
+              icon: Icons.flight_takeoff,
               label: 'Return 귀국',
               selected: _showReturn,
               onTap: () => setState(() => _showReturn = true),
@@ -189,7 +592,9 @@ class _QuestsPageState extends State<QuestsPage> {
           child: Icon(icon, color: primaryBlue, size: 28),
         ),
         const SizedBox(height: 8),
-        Text(label, style: const TextStyle(fontSize: 12, color: darkText, fontWeight: FontWeight.w500)),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 12, color: darkText, fontWeight: FontWeight.w500)),
       ],
     );
   }
@@ -210,9 +615,14 @@ class _QuestsPageState extends State<QuestsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: darkText)),
+                Text(title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: darkText)),
                 const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(fontSize: 12, color: lightText)),
+                Text(subtitle,
+                    style: const TextStyle(fontSize: 12, color: lightText)),
               ],
             ),
           ),
