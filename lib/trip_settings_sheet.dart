@@ -106,7 +106,7 @@ class _TripSettingsSheetState extends State<_TripSettingsSheet> {
     final DateTime? departure = _departure;
 
     // Example: arrival was changed to a day after the departure date.
-    if (arrival != null && departure != null && !departure.isAfter(arrival)) { 
+    if (arrival != null && departure != null && !departure.isAfter(arrival)) {
       setState(() => _error = 'Departure date must be after arrival.');
       return;
     }
@@ -130,7 +130,8 @@ class _TripSettingsSheetState extends State<_TripSettingsSheet> {
         children: [
           const Text(
             'Trip settings · 여행 설정',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: darkText),
+            style: TextStyle(
+                fontSize: 18, fontWeight: FontWeight.w800, color: darkText),
           ),
           const SizedBox(height: 8),
           ListTile(
@@ -138,7 +139,8 @@ class _TripSettingsSheetState extends State<_TripSettingsSheet> {
             leading: const Icon(Icons.flight_land, color: primaryBlue),
             title: const Text('Arrival date · 입국일'),
             subtitle: Text(_format(_arrival)),
-            trailing: const Icon(Icons.edit_calendar_outlined, color: lightText),
+            trailing:
+                const Icon(Icons.edit_calendar_outlined, color: lightText),
             onTap: _pickArrival,
           ),
           ListTile(
@@ -146,7 +148,8 @@ class _TripSettingsSheetState extends State<_TripSettingsSheet> {
             leading: const Icon(Icons.flight_takeoff, color: primaryBlue),
             title: const Text('Departure date · 출국일'),
             subtitle: Text(_format(_departure)),
-            trailing: const Icon(Icons.edit_calendar_outlined, color: lightText),
+            trailing:
+                const Icon(Icons.edit_calendar_outlined, color: lightText),
             onTap: _pickDeparture,
           ),
           if (_error != null)
@@ -174,9 +177,11 @@ class _TripSettingsSheetState extends State<_TripSettingsSheet> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryBlue,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
               ),
-              child: const Text('Save · 저장', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text('Save · 저장',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
         ],

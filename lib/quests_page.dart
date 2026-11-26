@@ -82,39 +82,9 @@ class _QuestsPageState extends State<QuestsPage> {
                 _buildTabToggle(),
                 const SizedBox(height: 20),
 
-                // Return tab content (redesigned in Q3).
+                // Return tab content
                 if (_showReturn) ...[
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: borderGray),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('D-12',
-                                style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: primaryBlue)),
-                            Text('Dec 30, 2026',
-                                style:
-                                    TextStyle(fontSize: 12, color: lightText)),
-                          ],
-                        ),
-                        TextButton(
-                          onPressed: () {},
-                          child: const Text('Return 타이머',
-                              style: TextStyle(color: primaryBlue)),
-                        )
-                      ],
-                    ),
-                  ),
+                  _buildDepartureCard(),
                   const SizedBox(height: 30),
                   const Text('Pack your suitcase',
                       style: TextStyle(
@@ -184,6 +154,95 @@ class _QuestsPageState extends State<QuestsPage> {
     return '${_months[date.month - 1]} ${date.day}';
   }
 
+  /// Text under the blue card for the arrival date.
+  /// After arrival: "Arrived Nov 4 · Day 23 in Korea".
+  /// Before arrival: "Arriving Dec 20 · D-24".
+  String _arrivalText(DateTime arrival) {
+    final DateTime today = DateUtils.dateOnly(DateTime.now());
+    final int days =
+        today.difference(arrival).inDays; // Negative before arrival
+
+    if (days < 0) {
+      return 'Arriving ${_formatDate(arrival)} · D$days'; // e.g. "D-24"
+    }
+    return 'Arrived ${_formatDate(arrival)} · Day ${days + 1} in Korea';
+  }
+
+  /// Days left until departure, e.g. 24 for "D-24". Null if no date yet.
+  int? get _daysUntilDeparture {
+    final DateTime? departure = _settings.departureDate;
+    if (departure == null) return null;
+    final DateTime today = DateUtils.dateOnly(DateTime.now());
+    return departure.difference(today).inDays;
+  }
+
+  /// Top card of the Return tab: D-day, or a prompt to set the return date.
+  Widget _buildDepartureCard() {
+    final DateTime? departure = _settings.departureDate;
+    final int? days = _daysUntilDeparture;
+
+    if (departure == null || days == null) {
+      // No return date yet: ask the user to set it.
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: softBlue,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter your return date.',
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.w800, color: darkText),
+            ),
+            const Text(
+              '귀국 날짜를 입력해 주세요',
+              style: TextStyle(fontSize: 13, color: lightText),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _openTripSettings,
+              icon: const Icon(Icons.settings_outlined, size: 18),
+              label: const Text('Open Trip settings'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: softBlue,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'DEPARTURE IN | 출국까지',
+            style: TextStyle(
+                fontSize: 11, fontWeight: FontWeight.bold, color: primaryBlue),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            days > 0 ? 'D-$days' : (days == 0 ? 'D-Day' : 'Departed'),
+            style: const TextStyle(
+                fontSize: 32, fontWeight: FontWeight.w800, color: darkText),
+          ),
+          Text(
+            '${_formatDate(departure)}, ${departure.year}',
+            style: const TextStyle(fontSize: 12, color: lightText),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Blue summary card at the top of the Arrival tab.
   Widget _buildArrivalSummary() {
     final int total = _quests.length;
@@ -240,7 +299,7 @@ class _QuestsPageState extends State<QuestsPage> {
           Text(
             arrival == null
                 ? 'Add your arrival date in Trip settings'
-                : 'Arrived ${_formatDate(arrival)}',
+                : _arrivalText(arrival),
             style: const TextStyle(fontSize: 12, color: Colors.white70),
           ),
         ],
@@ -316,7 +375,8 @@ class _QuestsPageState extends State<QuestsPage> {
 
   /// Opens Trip settings and saves the new values.
   Future<void> _openTripSettings() async {
-    final TripSettings? updated = await showTripSettingsSheet(context, _settings);
+    final TripSettings? updated =
+        await showTripSettingsSheet(context, _settings);
     if (updated == null) return; // Closed without saving
     setState(() => _settings = updated);
     await QuestStore.instance.saveSettings(updated);
@@ -428,14 +488,6 @@ class _QuestsPageState extends State<QuestsPage> {
   /// True when there is at least one quest and every quest is done.
   bool get _allDone => _quests.isNotEmpty && _quests.every((Quest q) => q.done);
 
-  /// The first unfinished quest, shown as "In progress". Null if all are done.
-  Quest? get _currentQuest {
-    for (final Quest q in _quests) {
-      if (!q.done) return q;
-    }
-    return null;
-  }
-
   /// Celebration card shown when every arrival quest is done.
   Widget _buildAllDone() {
     return Container(
@@ -531,10 +583,14 @@ class _QuestsPageState extends State<QuestsPage> {
 
   /// The user's own quest list, with a "New quest" button on top.
   Widget _buildMyQuests() {
+    // Unfinished quests first, finished ones at the bottom.
+    // Each group keeps the order the quests were added in.
+    final List<Quest> notDone = _quests.where((Quest q) => !q.done).toList();
+    final List<Quest> done = _quests.where((Quest q) => q.done).toList();
+
     // When "hide completed" is on, show only unfinished quests.
-    final List<Quest> visible = _settings.hideCompleted
-        ? _quests.where((Quest q) => !q.done).toList()
-        : _quests;
+    final List<Quest> visible =
+        _settings.hideCompleted ? notDone : [...notDone, ...done];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -565,17 +621,12 @@ class _QuestsPageState extends State<QuestsPage> {
 
   /// One quest: check circle, titles, and a Done or Undo button.
   Widget _buildMyQuestTile(Quest quest) {
-    final bool inProgress = quest == _currentQuest;
-
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: inProgress ? primaryBlue : borderGray,
-          width: inProgress ? 1.5 : 1,
-        ),
+        border: Border.all(color: borderGray),
       ),
       child: Row(
         children: [
@@ -598,16 +649,6 @@ class _QuestsPageState extends State<QuestsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (inProgress)
-                  const Text(
-                    'IN PROGRESS | 진행 중',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                      color: primaryBlue,
-                    ),
-                  ),
                 Text(
                   quest.title,
                   style: TextStyle(
