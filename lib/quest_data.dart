@@ -6,12 +6,14 @@ class Quest {
   final String title; // English title
   final String titleKo; // Korean title
   bool done; // true after the user taps "Done"
+  final String iconKey; // Name of the icon, e.g. 'phone' (see quest_icons.dart)
 
   Quest({
     required this.id,
     required this.title,
     required this.titleKo,
     this.done = false,
+    this.iconKey = 'flag',
   });
 }
 
@@ -35,9 +37,9 @@ class TripSettings {
 /// A new list is made every time, so adding one never changes the originals.
 List<Quest> recommendedArrivalQuests() {
   return [
-    Quest(id: 'phone', title: 'Get a phone number', titleKo: '휴대폰 개통'),
-    Quest(id: 'arc', title: 'Register as a foreigner (ARC)', titleKo: '외국인등록'),
-    Quest(id: 'bank', title: 'Open a bank account', titleKo: '은행 계좌 개설'),
+    Quest(id: 'phone', title: 'Get a phone number', titleKo: '휴대폰 개통', iconKey: 'phone'),
+    Quest(id: 'arc', title: 'Register as a foreigner (ARC)', titleKo: '외국인등록', iconKey: 'arc'),
+    Quest(id: 'bank', title: 'Open a bank account', titleKo: '은행 계좌 개설', iconKey: 'bank'),
   ];
 }
 
@@ -50,7 +52,7 @@ List<Quest> recommendedArrivalQuests() {
 class QuestStore {
   QuestStore._();
 
-  static final QuestStore instance= QuestStore._();
+  static final QuestStore instance = QuestStore._();
 
   List<Quest> _quests = [];
   TripSettings _settings = TripSettings();

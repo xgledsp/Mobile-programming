@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'app_theme.dart';
 import 'quest_data.dart';
+import 'quest_icons.dart';
+import 'quest_sheet.dart';
 
 class QuestsPage extends StatefulWidget {
   const QuestsPage({super.key});
@@ -141,8 +143,7 @@ class _QuestsPageState extends State<QuestsPage> {
                   _buildArrivalSummary(),
                   const SizedBox(height: 16),
                   if (_quests.isEmpty) _buildEmptyState(),
-                  if (_quests.isNotEmpty)
-                    _buildMyQuests(), 
+                  if (_quests.isNotEmpty) _buildMyQuests(),
                   if (!_settings.hideRecommendations &&
                       _recommendations.isNotEmpty) ...[
                     const SizedBox(height: 24),
@@ -307,13 +308,12 @@ class _QuestsPageState extends State<QuestsPage> {
     );
   }
 
-  /// Opens the "Create a quest" sheet.
+  /// Opens the "Create a quest" sheet and adds the new quest.
   /// All create buttons (empty state, list header, all done) call this.
-  void _openCreateQuest() {
-    // TODO: show the create quest bottom sheet.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Create a quest is coming soon')),
-    );
+  Future<void> _openCreateQuest() async {
+    final Quest? created = await showQuestSheet(context);
+    if (created == null) return; // Closed without saving
+    await _addQuest(created);
   }
 
   /// Recommended quests that are not in the user's list yet.
@@ -381,7 +381,7 @@ class _QuestsPageState extends State<QuestsPage> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.flight_land, color: primaryBlue, size: 22),
+          Icon(_iconFor(quest), color: primaryBlue, size: 22),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -411,10 +411,56 @@ class _QuestsPageState extends State<QuestsPage> {
     );
   }
 
+  /// Icon for a quest, looked up by its icon key.
+  /// Falls back to the flag if the key is unknown.
+  IconData _iconFor(Quest quest) {
+    return questIcons[quest.iconKey] ?? Icons.flag_outlined;
+  }
+
   /// Marks a quest as done, or undoes it, then saves.
   Future<void> _toggleDone(Quest quest) async {
     setState(() {
       quest.done = !quest.done;
+    });
+    await QuestStore.instance.saveQuests(_quests);
+  }
+
+  /// Asks "Delete this quest?" and removes it if the user agrees.
+  /// A recommended quest comes back to the recommendations after deleting.
+  Future<void> _deleteQuest(Quest quest) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: const Text('Delete this quest?'),
+        content: Text('"${quest.title}" will be removed from your list.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return; // Cancel, or tapped outside the popup
+
+    setState(() {
+      _quests.remove(quest);
+    });
+    await QuestStore.instance.saveQuests(_quests);
+  }
+
+  /// Opens the same sheet filled with this quest, then saves the changes.
+  Future<void> _editQuest(Quest quest) async {
+    final Quest? edited = await showQuestSheet(context, quest: quest);
+    if (edited == null) return; // Closed without saving
+
+    setState(() {
+      final int index = _quests.indexOf(quest);
+      _quests[index] = edited; // Put the new one in the same place
     });
     await QuestStore.instance.saveQuests(_quests);
   }
@@ -464,10 +510,19 @@ class _QuestsPageState extends State<QuestsPage> {
       ),
       child: Row(
         children: [
-          Icon(
-            quest.done ? Icons.check_circle : Icons.radio_button_unchecked,
-            color: quest.done ? primaryBlue : borderGray,
-            size: 28,
+          // Quest icon in a soft box. Turns into a blue check when done.
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: quest.done ? primaryBlue : softBlue,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              quest.done ? Icons.check : _iconFor(quest),
+              color: quest.done ? Colors.white : primaryBlue,
+              size: 22,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -508,6 +563,18 @@ class _QuestsPageState extends State<QuestsPage> {
                   ),
                   child: const Text('Done · 완료'),
                 ),
+          PopupMenuButton<String>(
+            tooltip: 'More options',
+            icon: const Icon(Icons.more_vert, color: lightText),
+            onSelected: (String value) {
+              if (value == 'edit') _editQuest(quest);
+              if (value == 'delete') _deleteQuest(quest);
+            },
+            itemBuilder: (BuildContext context) => const [
+              PopupMenuItem(value: 'edit', child: Text('Edit · 수정')),
+              PopupMenuItem(value: 'delete', child: Text('Delete · 삭제')),
+            ],
+          ),
         ],
       ),
     );
