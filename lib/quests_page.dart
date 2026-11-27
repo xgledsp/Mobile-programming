@@ -19,6 +19,8 @@ class _QuestsPageState extends State<QuestsPage> {
   // Data from QuestStore (filled in by _loadData).
   List<Quest> _quests = [];
   List<Quest> _returnQuests = [];
+  // Time groups the user folded on the Return tab (not saved).
+  final Set<String> _collapsedPhases = {};
   TripSettings _settings = TripSettings();
 
   @override
@@ -91,6 +93,17 @@ class _QuestsPageState extends State<QuestsPage> {
                   _buildDepartureCard(),
                   const SizedBox(height: 16),
                   if (_returnQuests.isEmpty) _buildReturnEmptyState(),
+                  if (_returnQuests.isNotEmpty) _buildReturnQuests(), 
+                  if (!_settings.hideReturnRecommendations &&
+                      _returnRecommendations.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _buildRecommendations(
+                      items: _returnRecommendations,
+                      onHide: _hideReturnRecommendations,
+                      onAdd: _addReturnQuest,
+                      showPhase: true,
+                    ),
+                  ],
                 ] else ...[
                   // Arrival tab content.
                   _buildArrivalSummary(),
@@ -104,7 +117,11 @@ class _QuestsPageState extends State<QuestsPage> {
                   if (!_settings.hideRecommendations &&
                       _recommendations.isNotEmpty) ...[
                     const SizedBox(height: 24),
-                    _buildRecommendations(),
+                    _buildRecommendations(
+                      items: _recommendations,
+                      onHide: _hideRecommendations,
+                      onAdd: _addQuest,
+                    ),
                   ],
                 ],
               ],
@@ -380,20 +397,19 @@ class _QuestsPageState extends State<QuestsPage> {
     await _addQuest(created);
   }
 
-  
   /// Adds a quest to the Return list and saves it.
   Future<void> _addReturnQuest(Quest quest) async {
     setState(() {
       _returnQuests.add(quest);
     });
-    await QuestStore.instance.saveReturnQuests(_returnQuests); 
+    await QuestStore.instance.saveReturnQuests(_returnQuests);
   }
 
   /// Opens the create sheet for a Return quest.
   /// [phase] picks a time group in advance (used by "+ Add" in a group).
   Future<void> _openCreateReturnQuest({String? phase}) async {
     final Quest? created =
-        await showQuestSheet(context, isReturn:true, phase: phase);
+        await showQuestSheet(context, isReturn: true, phase: phase);
     if (created == null) return; // Closed without saving
     await _addReturnQuest(created);
   }
@@ -417,18 +433,21 @@ class _QuestsPageState extends State<QuestsPage> {
               color: softBlue,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Icon(Icons.luggage_outlined, color: primaryBlue, size: 28),
+            child: const Icon(Icons.luggage_outlined,
+                color: primaryBlue, size: 28),
           ),
           const SizedBox(height: 16),
           const Text(
             'Plan your way home',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: darkText),
+            style: TextStyle(
+                fontSize: 22, fontWeight: FontWeight.w800, color: darkText),
           ),
           const SizedBox(height: 4),
           const Text(
             '아직 만든 귀국 퀘스트가 없어요',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: darkText),
+            style: TextStyle(
+                fontSize: 14, fontWeight: FontWeight.bold, color: darkText),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -472,7 +491,8 @@ class _QuestsPageState extends State<QuestsPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryBlue,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
               ),
             ),
           ),
@@ -506,8 +526,30 @@ class _QuestsPageState extends State<QuestsPage> {
     await QuestStore.instance.saveSettings(_settings);
   }
 
+  /// Recommended return quests that are not in the return list yet.
+  List<Quest> get _returnRecommendations {
+    final Set<String> myIds = _returnQuests.map((Quest q) => q.id).toSet();
+    return recommendedReturnQuests()
+        .where((Quest q) => !myIds.contains(q.id))
+        .toList();
+  }
+
+  /// Hides the return recommendations box (separate from Arrival).
+  Future<void> _hideReturnRecommendations() async {
+    setState(() {
+      _settings.hideReturnRecommendations = true;
+    });
+    await QuestStore.instance.saveSettings(_settings);
+  }
+
   /// "Recommended quests" box with a close button.
-  Widget _buildRecommendations() {
+  /// Used on both tabs: each tab passes its own list and actions.
+  Widget _buildRecommendations({
+    required List<Quest> items, // Quests to show
+    required VoidCallback onHide, // What the close button does
+    required void Function(Quest) onAdd, // What the "+" button does
+    bool showPhase = false, // Show the time group tag (Return tab)
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -524,12 +566,13 @@ class _QuestsPageState extends State<QuestsPage> {
               tooltip:
                   'Hide recommendations', // Shown when the mouse is over it
               icon: const Icon(Icons.close, size: 18, color: lightText),
-              onPressed: _hideRecommendations,
+              onPressed: onHide,
             ),
           ],
         ),
-        for (final Quest quest in _recommendations) ...[
-          _buildRecommendationTile(quest),
+        for (final Quest quest in items) ...[
+          // ③ The list passed in
+          _buildRecommendationTile(quest, onAdd: onAdd, showPhase: showPhase),
           const SizedBox(height: 8),
         ],
       ],
@@ -537,7 +580,11 @@ class _QuestsPageState extends State<QuestsPage> {
   }
 
   /// One recommended quest with a "+" button.
-  Widget _buildRecommendationTile(Quest quest) {
+  Widget _buildRecommendationTile(
+    Quest quest, {
+    required void Function(Quest) onAdd,
+    bool showPhase = false,
+  }) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
       decoration: BoxDecoration(
@@ -566,10 +613,26 @@ class _QuestsPageState extends State<QuestsPage> {
               ],
             ),
           ),
+          if (showPhase)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                // English part only: "Last week · 마지막 주" -> "Last week"
+                (phaseTitles[quest.phase] ?? '').split(' · ').first,
+                style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: primaryBlue),
+              ),
+            ),
           IconButton(
             tooltip: 'Add to my quests',
             icon: const Icon(Icons.add_circle, color: primaryBlue),
-            onPressed: () => _addQuest(quest),
+            onPressed: () => onAdd(quest),
           ),
         ],
       ),
@@ -624,12 +687,23 @@ class _QuestsPageState extends State<QuestsPage> {
     return questIcons[quest.iconKey] ?? Icons.flag_outlined;
   }
 
+  /// The list (Arrival or Return) that holds this quest.
+  List<Quest> _listOf(Quest quest) {
+    return _returnQuests.contains(quest) ? _returnQuests : _quests;
+  }
+
+  /// Saves both quest lists.
+  Future<void> _saveLists() async {
+    await QuestStore.instance.saveQuests(_quests);
+    await QuestStore.instance.saveReturnQuests(_returnQuests);
+  }
+
   /// Marks a quest as done, or undoes it, then saves.
   Future<void> _toggleDone(Quest quest) async {
     setState(() {
       quest.done = !quest.done;
     });
-    await QuestStore.instance.saveQuests(_quests);
+    await _saveLists();
   }
 
   /// Asks "Delete this quest?" and removes it if the user agrees.
@@ -655,21 +729,125 @@ class _QuestsPageState extends State<QuestsPage> {
     if (confirmed != true) return; // Cancel, or tapped outside the popup
 
     setState(() {
-      _quests.remove(quest);
+      _listOf(quest).remove(quest);
     });
-    await QuestStore.instance.saveQuests(_quests);
+    await _saveLists();
   }
 
   /// Opens the same sheet filled with this quest, then saves the changes.
   Future<void> _editQuest(Quest quest) async {
-    final Quest? edited = await showQuestSheet(context, quest: quest);
+    final List<Quest> list = _listOf(quest);
+    final Quest? edited = await showQuestSheet(
+      context,
+      quest: quest,
+      isReturn: list == _returnQuests,
+    );
     if (edited == null) return; // Closed without saving
 
     setState(() {
-      final int index = _quests.indexOf(quest);
-      _quests[index] = edited; // Put the new one in the same place
+      final int index = list.indexOf(quest);
+      list[index] = edited; // Put the new one in the same place
     });
-    await QuestStore.instance.saveQuests(_quests);
+    await _saveLists();
+  }
+
+  /// Return quests grouped by time. Each group can fold and unfold.
+  Widget _buildReturnQuests() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'My return quests · 내 귀국 퀘스트',
+                style: TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.bold, color: darkText),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => _openCreateReturnQuest(),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('New quest'),
+            ),
+          ],
+        ),
+        for (final String phase in returnPhases) _buildPhaseGroup(phase),
+      ],
+    );
+  }
+
+  /// One time group: a title you can tap to fold, then its quests.
+  Widget _buildPhaseGroup(String phase) {
+    final List<Quest> inGroup =
+        _returnQuests.where((Quest q) => q.phase == phase).toList();
+
+    // Unfinished first, finished at the bottom (same as Arrival).
+    final List<Quest> notDone = inGroup.where((Quest q) => !q.done).toList();
+    final List<Quest> done = inGroup.where((Quest q) => q.done).toList();
+    final List<Quest> visible =
+        _settings.hideCompleted ? notDone : [...notDone, ...done];
+
+    final bool collapsed = _collapsedPhases.contains(phase);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Group title. Tap to fold or unfold.
+        InkWell(
+          onTap: () => setState(() {
+            if (collapsed) {
+              _collapsedPhases.remove(phase);
+            } else {
+              _collapsedPhases.add(phase);
+            }
+          }),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(
+              children: [
+                Icon(phaseIcons[phase], size: 18, color: primaryBlue),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    (phaseTitles[phase] ?? phase).toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                      color: lightText,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${inGroup.length}',
+                  style: const TextStyle(fontSize: 12, color: lightText),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  collapsed ? Icons.chevron_right : Icons.expand_more,
+                  color: lightText,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (!collapsed) ...[
+          // Empty group: a short line that opens the sheet with this group.
+          if (inGroup.isEmpty)
+            TextButton.icon(
+              onPressed: () =>
+                  _openCreateReturnQuest(phase: phase), 
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('No quests yet · Add'),
+            ),
+          for (final Quest quest in visible) ...[
+            _buildMyQuestTile(quest),
+            const SizedBox(height: 8),
+          ],
+        ],
+      ],
+    );
   }
 
   /// The user's own quest list, with a "New quest" button on top.
@@ -855,5 +1033,4 @@ class _QuestsPageState extends State<QuestsPage> {
       ),
     );
   }
-
 }
