@@ -18,6 +18,7 @@ class _QuestsPageState extends State<QuestsPage> {
 
   // Data from QuestStore (filled in by _loadData).
   List<Quest> _quests = [];
+  List<Quest> _returnQuests = [];
   TripSettings _settings = TripSettings();
 
   @override
@@ -29,10 +30,13 @@ class _QuestsPageState extends State<QuestsPage> {
   /// Reads quests and settings from the store, then redraws the page.
   Future<void> _loadData() async {
     final List<Quest> quests = await QuestStore.instance.loadQuests();
+    final List<Quest> returnQuests =
+        await QuestStore.instance.loadReturnQuests();
     final TripSettings settings = await QuestStore.instance.loadSettings();
     if (!mounted) return; // The page may be closed while waiting
     setState(() {
       _quests = quests;
+      _returnQuests = returnQuests;
       _settings = settings;
     });
   }
@@ -85,31 +89,8 @@ class _QuestsPageState extends State<QuestsPage> {
                 // Return tab content
                 if (_showReturn) ...[
                   _buildDepartureCard(),
-                  const SizedBox(height: 30),
-                  const Text('Pack your suitcase',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: darkText)),
-                  const SizedBox(height: 8),
-                  const Text('(목표: 4/4) Collect 4 essential items',
-                      style: TextStyle(fontSize: 13, color: lightText)),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildSuitcaseItem(Icons.sim_card, 'SIM'),
-                      _buildSuitcaseItem(Icons.credit_card, 'Bank card'),
-                      _buildSuitcaseItem(Icons.money, 'Cash'),
-                      _buildSuitcaseItem(Icons.badge, 'ARC'),
-                    ],
-                  ),
-                  const SizedBox(height: 30),
-                  _buildQuestTile(
-                      Icons.phone_iphone, 'Carpool phone plan', '통신사 요금제'),
-                  const SizedBox(height: 12),
-                  _buildQuestTile(Icons.account_balance, 'Clone bank account',
-                      '은행 계좌 개설하기'),
+                  const SizedBox(height: 16),
+                  if (_returnQuests.isEmpty) _buildReturnEmptyState(),
                 ] else ...[
                   // Arrival tab content.
                   _buildArrivalSummary(),
@@ -197,7 +178,9 @@ class _QuestsPageState extends State<QuestsPage> {
             const Text(
               'Enter your return date.',
               style: TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white),
             ),
             const Text(
               '귀국 날짜를 입력해 주세요',
@@ -231,7 +214,9 @@ class _QuestsPageState extends State<QuestsPage> {
           const Text(
             'RETURN IN | 귀국까지',
             style: TextStyle(
-                fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70),
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.white70),
           ),
           const SizedBox(height: 4),
           Text(
@@ -393,6 +378,107 @@ class _QuestsPageState extends State<QuestsPage> {
     final Quest? created = await showQuestSheet(context);
     if (created == null) return; // Closed without saving
     await _addQuest(created);
+  }
+
+  
+  /// Adds a quest to the Return list and saves it.
+  Future<void> _addReturnQuest(Quest quest) async {
+    setState(() {
+      _returnQuests.add(quest);
+    });
+    await QuestStore.instance.saveReturnQuests(_returnQuests); 
+  }
+
+  /// Opens the create sheet for a Return quest.
+  /// [phase] picks a time group in advance (used by "+ Add" in a group).
+  Future<void> _openCreateReturnQuest({String? phase}) async {
+    final Quest? created =
+        await showQuestSheet(context, isReturn:true, phase: phase);
+    if (created == null) return; // Closed without saving
+    await _addReturnQuest(created);
+  }
+
+  /// Shown when the user has no return quests yet.
+  Widget _buildReturnEmptyState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderGray),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: softBlue,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(Icons.luggage_outlined, color: primaryBlue, size: 28),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Plan your way home',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: darkText),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            '아직 만든 귀국 퀘스트가 없어요',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: darkText),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Sort tasks by when to do them, so nothing gets left behind.\n'
+            '시기별로 나눠 두면 빠뜨리는 것 없이 꼼꼼하게 챙길 수 있어요.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, height: 1.4, color: lightText),
+          ),
+          const SizedBox(height: 16),
+          // Small preview of the three time groups.
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 6,
+            children: [
+              for (final String p in returnPhases)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(phaseIcons[p], size: 16, color: primaryBlue),
+                    const SizedBox(width: 4),
+                    Text(
+                      phaseTitles[p] ?? p,
+                      style: const TextStyle(fontSize: 12, color: primaryBlue),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton.icon(
+              onPressed: () => _openCreateReturnQuest(),
+              icon: const Icon(Icons.add),
+              label: const Text(
+                'Create a return quest · 퀘스트 만들기',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Recommended quests that are not in the user's list yet.
@@ -770,57 +856,4 @@ class _QuestsPageState extends State<QuestsPage> {
     );
   }
 
-  Widget _buildSuitcaseItem(IconData icon, String label) {
-    return Column(
-      children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            border: Border.all(color: borderGray),
-          ),
-          child: Icon(icon, color: primaryBlue, size: 28),
-        ),
-        const SizedBox(height: 8),
-        Text(label,
-            style: const TextStyle(
-                fontSize: 12, color: darkText, fontWeight: FontWeight.w500)),
-      ],
-    );
-  }
-
-  Widget _buildQuestTile(IconData icon, String title, String subtitle) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderGray),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: primaryBlue, size: 28),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: darkText)),
-                const SizedBox(height: 4),
-                Text(subtitle,
-                    style: const TextStyle(fontSize: 12, color: lightText)),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_right, color: lightText),
-        ],
-      ),
-    );
-  }
 }
