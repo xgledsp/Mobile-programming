@@ -30,7 +30,7 @@ const Map<String, String> phaseTitles = {
   'returnDay': 'Return day · 귀국 당일',
 };
 
-/// Values from the Trip settings sheet.
+/// Values from the My stay sheet.
 /// Dates are null until the user picks them.
 class TripSettings {
   DateTime? arrivalDate;

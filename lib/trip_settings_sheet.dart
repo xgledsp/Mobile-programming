@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'app_theme.dart';
 import 'quest_data.dart';
 
-/// Opens Trip settings with the [current] values.
+/// Opens the My stay sheet with the [current] values.
 /// Returns the new settings, or null if the sheet is closed without saving.
 Future<TripSettings?> showTripSettingsSheet(
   BuildContext context,
@@ -130,7 +130,7 @@ class _TripSettingsSheetState extends State<_TripSettingsSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Trip settings · 여행 설정',
+            'My stay · 내 체류 정보',
             style: TextStyle(
                 fontSize: 18, fontWeight: FontWeight.w800, color: darkText),
           ),

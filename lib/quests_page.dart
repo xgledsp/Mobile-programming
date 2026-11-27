@@ -68,7 +68,7 @@ class _QuestsPageState extends State<QuestsPage> {
                     ElevatedButton.icon(
                       onPressed: _openTripSettings,
                       icon: const Icon(Icons.settings_outlined, size: 18),
-                      label: const Text('Trip settings',
+                      label: const Text('My stay',
                           style: TextStyle(fontSize: 12)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryBlue,
@@ -152,20 +152,6 @@ class _QuestsPageState extends State<QuestsPage> {
     return '${_months[date.month - 1]} ${date.day}';
   }
 
-  /// Text under the blue card for the arrival date.
-  /// After arrival: "Arrived Nov 4 · Day 23 in Korea".
-  /// Before arrival: "Arriving Dec 20 · D-24".
-  String _arrivalText(DateTime arrival) {
-    final DateTime today = DateUtils.dateOnly(DateTime.now());
-    final int days =
-        today.difference(arrival).inDays; // Negative before arrival
-
-    if (days < 0) {
-      return 'Arriving ${_formatDate(arrival)} · D$days'; // e.g. "D-24"
-    }
-    return 'Arrived ${_formatDate(arrival)} · Day ${days + 1} in Korea';
-  }
-
   /// Days left until departure, e.g. 24 for "D-24". Null if no date yet.
   int? get _daysUntilDeparture {
     final DateTime? departure = _settings.departureDate;
@@ -174,88 +160,33 @@ class _QuestsPageState extends State<QuestsPage> {
     return departure.difference(today).inDays;
   }
 
-  /// Blue card at the top of the Return tab (same style as Arrival):
-  /// the return D-day, or a prompt to set the return date.
-  Widget _buildDepartureCard() {
-    final DateTime? departure = _settings.departureDate;
-    final int? days = _daysUntilDeparture;
-
-    if (departure == null || days == null) {
-      // No return date yet: ask the user to set it.
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: primaryBlue,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Enter your return date.',
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white),
-            ),
-            const Text(
-              '귀국 날짜를 입력해 주세요',
-              style: TextStyle(fontSize: 13, color: Colors.white70),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: _openTripSettings,
-              icon: const Icon(Icons.settings_outlined, size: 18),
-              label: const Text('Open Trip settings'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: Colors.white),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+  /// Small white "n / m done" badge. Hidden when there are no quests.
+  Widget _buildDoneBadge(List<Quest> quests) {
+    if (quests.isEmpty) return const SizedBox.shrink();
+    final int done = quests.where((Quest q) => q.done).length;
 
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: primaryBlue,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'RETURN IN | 귀국까지',
-            style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: Colors.white70),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            days > 0 ? 'D-$days' : (days == 0 ? 'D-Day' : 'Back home'),
-            style: const TextStyle(
-                fontSize: 32, fontWeight: FontWeight.w800, color: Colors.white),
-          ),
-          Text(
-            '${_formatDate(departure)}, ${departure.year}',
-            style: const TextStyle(fontSize: 12, color: Colors.white70),
-          ),
-        ],
+      child: Text(
+        '$done / ${quests.length} done',
+        style: const TextStyle(
+            fontSize: 12, fontWeight: FontWeight.bold, color: primaryBlue),
       ),
     );
   }
 
-  /// Blue summary card at the top of the Arrival tab.
-  Widget _buildArrivalSummary() {
-    final int total = _quests.length;
-    final int done = _quests.where((Quest q) => q.done).length;
-    final DateTime? arrival = _settings.arrivalDate;
-
+  /// Blue card shared by both tabs when the date is set.
+  /// Left: label, big number and date. Right: progress badge.
+  Widget _buildSummaryCard({
+    required String label, // e.g. "RETURN IN | 귀국까지"
+    required String bigText, // e.g. "D-24" or "Day 23"
+    required String dateText, // e.g. "Dec 20, 2026"
+    required List<Quest> quests, // Used for the badge
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -268,49 +199,124 @@ class _QuestsPageState extends State<QuestsPage> {
         children: [
           Row(
             children: [
-              Text(
-                total == 0 ? '0' : '$done / $total',
-                style: const TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      total == 0
-                          ? 'arrival quests created'
-                          : 'arrival quests done',
-                      style: const TextStyle(fontSize: 14, color: Colors.white),
-                    ),
-                    Text(
-                      total == 0 ? '생성한 입국 퀘스트' : '완료한 입국 퀘스트',
-                      style:
-                          const TextStyle(fontSize: 12, color: Colors.white70),
-                    ),
-                  ],
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white70),
                 ),
               ),
+              _buildDoneBadge(quests),
             ],
           ),
-          const SizedBox(height: 12),
-          if (total == 0)
-            const Text(
-              'Your journey starts with your first quest.',
-              style: TextStyle(fontSize: 13, color: Colors.white),
-            ),
+          const SizedBox(height: 4),
           Text(
-            arrival == null
-                ? 'Add your arrival date in Trip settings'
-                : _arrivalText(arrival),
+            bigText,
+            style: const TextStyle(
+                fontSize: 32, fontWeight: FontWeight.w800, color: Colors.white),
+          ),
+          Text(
+            dateText,
             style: const TextStyle(fontSize: 12, color: Colors.white70),
           ),
         ],
       ),
+    );
+  }
+
+  /// Blue card shared by both tabs when the date is not set yet.
+  Widget _buildNoDateCard({
+    required String title,
+    required String titleKo,
+    required List<Quest> quests,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: primaryBlue,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white),
+                ),
+              ),
+              _buildDoneBadge(quests),
+            ],
+          ),
+          Text(
+            titleKo,
+            style: const TextStyle(fontSize: 13, color: Colors.white70),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _openTripSettings,
+            icon: const Icon(Icons.settings_outlined, size: 18),
+            label: const Text('Set up my stay'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: const BorderSide(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Blue card at the top of the Return tab.
+  Widget _buildDepartureCard() {
+    final DateTime? departure = _settings.departureDate;
+    final int? days = _daysUntilDeparture;
+
+    if (departure == null || days == null) {
+      return _buildNoDateCard(
+        title: 'Enter your return date.',
+        titleKo: '귀국 날짜를 입력해 주세요',
+        quests: _returnQuests,
+      );
+    }
+    return _buildSummaryCard(
+      label: 'RETURN IN | 귀국까지',
+      bigText: days > 0 ? 'D-$days' : (days == 0 ? 'D-Day' : 'Back home'),
+      dateText: '${_formatDate(departure)}, ${departure.year}',
+      quests: _returnQuests,
+    );
+  }
+
+  /// Blue card at the top of the Arrival tab.
+  Widget _buildArrivalSummary() {
+    final DateTime? arrival = _settings.arrivalDate;
+
+    if (arrival == null) {
+      return _buildNoDateCard(
+        title: 'Add your arrival date.',
+        titleKo: '입국 날짜를 입력해 주세요',
+        quests: _quests,
+      );
+    }
+
+    final DateTime today = DateUtils.dateOnly(DateTime.now());
+    final int days = today.difference(arrival).inDays; // Negative before arrival
+    final bool arrived = days >= 0;
+
+    return _buildSummaryCard(
+      label: arrived ? 'IN KOREA | 한국에서' : 'ARRIVING IN | 입국까지',
+      bigText: arrived ? 'Day ${days + 1}' : 'D$days',
+      dateText:
+          '${arrived ? 'Arrived' : 'Arriving'} ${_formatDate(arrival)}, ${arrival.year}',
+      quests: _quests,
     );
   }
 
@@ -380,7 +386,7 @@ class _QuestsPageState extends State<QuestsPage> {
     );
   }
 
-  /// Opens Trip settings and saves the new values.
+  /// Opens My stay and saves the new values.
   Future<void> _openTripSettings() async {
     final TripSettings? updated =
         await showTripSettingsSheet(context, _settings);
