@@ -30,7 +30,7 @@ class MePage extends StatelessWidget {
       body: SafeArea(
         child: ResponsiveLayout(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+            padding: const EdgeInsets.all(24.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -121,7 +121,7 @@ class _Header extends StatelessWidget {
               Text(
                 s.title,
                 style: const TextStyle(
-                  fontSize: 30,
+                  fontSize: 28,
                   fontWeight: FontWeight.w800,
                   color: darkText,
                 ),

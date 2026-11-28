@@ -150,22 +150,43 @@ class _NoticePageState extends State<NoticePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        // This page is a bottom tab, so there is nothing to go back to.
-        automaticallyImplyLeading: false,
-        title: const Text('Notice Explained · 공지 해석',
-            style: TextStyle(
-                color: darkText, fontWeight: FontWeight.bold, fontSize: 18)),
-      ),
-      body: ResponsiveLayout(
-        child: switch (_stage) {
-          _Stage.input => _buildInput(),
-          _Stage.loading => _buildLoading(),
-          _Stage.result => _buildResult(_analysis!),
-          _Stage.error => _buildError(),
-        },
+      body: SafeArea(
+        child: ResponsiveLayout(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Page title, same style as Home / Quests / Me.
+              const Padding(
+                padding: EdgeInsets.fromLTRB(24, 24, 24, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Notice Explained',
+                      style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: darkText),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      '공지 해설 · AI',
+                      style: TextStyle(fontSize: 13, color: lightText),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: switch (_stage) {
+                  _Stage.input => _buildInput(),
+                  _Stage.loading => _buildLoading(),
+                  _Stage.result => _buildResult(_analysis!),
+                  _Stage.error => _buildError(),
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

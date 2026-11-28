@@ -197,7 +197,19 @@ class _OnboardingPageState
 
           _buildLanguageToggle(),
 
+
           const SizedBox(height: 10),
+
+          const Text(
+            'NOTICE | 안내',
+            style: TextStyle(
+              fontSize: 6.8,
+              fontWeight: FontWeight.w800,
+              color: darkText,
+            ),
+          ),
+
+          const SizedBox(height: 4),
 
           // --------------------------------------------------------
           // BILINGUAL AI HELP
@@ -223,31 +235,9 @@ class _OnboardingPageState
             },
           ),
 
-          const SizedBox(height: 6),
+          
 
-          // --------------------------------------------------------
-          // CIVIC VERIFIED ANSWERS
-          // --------------------------------------------------------
-
-          _buildInfoCard(
-            icon: Icons.shield_outlined,
-
-            title:
-                selectedLanguage ==
-                        AppLanguage.english
-                    ? 'Civic-Verified Answers'
-                    : '공식 정보 기반 답변',
-
-            description:
-                selectedLanguage ==
-                        AppLanguage.english
-                    ? 'AI legal info makes back to official governmental sources.'
-                    : '공식 정부 자료를 기반으로 법률 정보를 제공합니다.',
-
-            onTap: () {
-              // //
-            },
-          ),
+         
 
           const SizedBox(height: 10),
 
@@ -490,7 +480,7 @@ class _OnboardingPageState
       color: Colors.transparent,
 
       child: InkWell(
-        onTap: onTap,
+        
 
         borderRadius:
             BorderRadius.circular(7),
